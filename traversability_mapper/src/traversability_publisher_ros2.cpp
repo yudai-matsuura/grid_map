@@ -27,17 +27,11 @@ private:
     {
         map_.setTimestamp(this->get_clock()->now().nanoseconds());
         map_.get("traversability").setConstant(0);
-        grid_map::Matrix& layerData = map_["traversability"];
         double radius = 0.4;
-        int cell_count = 0;
         for (grid_map::CircleIterator iterator(map_, grid_map::Position(0.0, 0.0), radius);
             !iterator.isPastEnd(); ++iterator) {
-                const grid_map::Index index = *iterator;
-                // map_.at("traversability", *iterator) = 1; // Area that can move with Wheel
-                layerData(index(0), index(1)) = 1.0;
-                cell_count++;
+                map_.at("traversability", *iterator) = 1; // Area that can move with Wheel
         }
-        RCLCPP_INFO(this->get_logger(), "Set %d cells to 1", cell_count);
         auto message = grid_map::GridMapRosConverter::toMessage(map_);
         publisher_->publish(std::move(message));
         RCLCPP_INFO_ONCE(this->get_logger(), "Grid map published.");
