@@ -8,10 +8,17 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
+find_package(traversability_msgs REQUIRED)
 
 add_executable(traversability_publisher_ros2 src/traversability_publisher_ros2.cpp)
-ament_target_dependencies(traversability_publisher_ros2 rclcpp grid_map_ros)
+ament_target_dependencies(
+  traversability_publisher_ros2 
+  rclcpp 
+  grid_map_ros 
+  sensor_msgs
+  traversability_msgs)
 
 install(TARGETS
   traversability_publisher_ros2
