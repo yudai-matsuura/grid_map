@@ -34,6 +34,9 @@ public:
 private:
     void classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg)
     {
+        map_.clearAll();
+        RCLCPP_INFO(this->get_logger(), "classifiedRegionCallback is called !");
+
         map_.setTimestamp(this->get_clock()->now().nanoseconds());
         
         float traversability_value = 0.0;
@@ -44,10 +47,12 @@ private:
             traversability_value = 1.0;
             Eigen::Vector3f rgb(0.0f, 0.0f, 1.0f);  // Blue (R, G, B)
             grid_map::colorVectorToValue(rgb, packed_color);
+        RCLCPP_INFO(this->get_logger(), "classification WHEEL !");
         } else if (msg->classification == traversability_msgs::msg::ClassifiedRegion::CLASSIFICATION_GRIPPER) {
             traversability_value = 2.0;
             Eigen::Vector3f rgb(0.0f, 1.0f, 0.0f);  // Green (R, G, B)
             grid_map::colorVectorToValue(rgb, packed_color);
+            RCLCPP_INFO(this->get_logger(), "classification GRIPPER !");
         } else {
             return;
         }
@@ -67,6 +72,8 @@ private:
 
         auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
         grid_map_pub_->publish(std::move(output_msg));
+        RCLCPP_INFO(this->get_logger(), "grid map published !");
+
     }
 
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_pub_;
