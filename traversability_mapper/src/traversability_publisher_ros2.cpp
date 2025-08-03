@@ -1,11 +1,12 @@
 #include <rclcpp/rclcpp.hpp>
 #include <grid_map_ros/grid_map_ros.hpp>
+#include <grid_map_core/GridMap.hpp>
+#include <grid_map_core/GridMapMath.hpp>
 #include <grid_map_msgs/msg/grid_map.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <limits>
-
-#include "traversability_msgs/msg/region_data.hpp"
+#include "traversability_msgs/msg/classified_region.hpp"
 
 class TraversabilityPublisher : public rclcpp::Node
 {
@@ -16,61 +17,60 @@ public:
         grid_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("/grid_map", 10);
 
         // Subscriber
-        region_data_sub_ = this->create_subscription<traversability_msgs::msg::RegionData>(
-            "/region_data", 10, std::bind(&TraversabilityPublisher::regionCallback, this, std::placeholders::_1));
+        classified_region_sub_ = this->create_subscription<traversability_msgs::msg::ClassifiedRegion>(
+            "/classified_region", 10, std::bind(&TraversabilityPublisher::classifiedRegionCallback, this, std::placeholders::_1));
 
         // Initialize grid map
         map_.setFrameId("base_link");
         map_.setGeometry(grid_map::Length(5.0, 5.0), 0.05);
-        map_.add("wheel_area", 0.0);
-        map_.add("gripper_area", 0.0);
-        // map_.add("traversability");
+        map_.add("traversability", 0.0);
+        map_.add("color", 0.0);
+        map_.setBasicLayers({"traversability", "color"});
+
         RCLCPP_INFO(this->get_logger(), "Created map with size %f x %f m (%i x %i cells).",
                 map_.getLength().x(), map_.getLength().y(), map_.getSize()(0), map_.getSize()(1));
     }
 
 private:
-    void regionCallback(const traversability_msgs::msg::RegionData::SharedPtr msg)
+    void classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg)
     {
         map_.setTimestamp(this->get_clock()->now().nanoseconds());
-        map_.get("wheel_area").setConstant(std::numeric_limits<float>::quiet_NaN());
-        map_.get("gripper_area").setConstant(std::numeric_limits<float>::quiet_NaN());
+        
+        float traversability_value = 0.0;
+        float packed_color = 0.0;
 
-        // get roughness score and pointcloud from message
-        double roughness = msg->roughness;
-        const sensor_msgs::msg::PointCloud2 & pointcloud = msg->region_pointcloud;
-        // judge gripper or wheel
-        // int traversability_value;
-        std::string target_layer = "";
-        // std::string other_layer = "";
-        if (roughness < 0.4) {
-            target_layer = "wheel_area"; //Wheel
-            // other_layer = "gripper_area";
+
+        if (msg->classification == traversability_msgs::msg::ClassifiedRegion::CLASSIFICATION_WHEEL) {
+            traversability_value = 1.0;
+            Eigen::Vector3f rgb(0.0f, 0.0f, 1.0f);  // Blue (R, G, B)
+            grid_map::colorVectorToValue(rgb, packed_color);
+        } else if (msg->classification == traversability_msgs::msg::ClassifiedRegion::CLASSIFICATION_GRIPPER) {
+            traversability_value = 2.0;
+            Eigen::Vector3f rgb(0.0f, 1.0f, 0.0f);  // Green (R, G, B)
+            grid_map::colorVectorToValue(rgb, packed_color);
         } else {
-            target_layer = "gripper_area"; //Gripper
-            // other_layer = "wheel_area";
+            return;
         }
-        // project pointcloud to gid map
-        sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
-        sensor_msgs::PointCloud2ConstIterator<float> iter_y(pointcloud, "y");
 
-        for (; iter_x != iter_x.end(); ++iter_x, ++iter_y) {
+        const sensor_msgs::msg::PointCloud2& pointcloud = msg->region_pointcloud;
+
+        for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_y(pointcloud, "y");
+            iter_x != iter_x.end(); ++iter_x, ++iter_y)
+        {
             grid_map::Position point_position(*iter_x, *iter_y);
-
             grid_map::Index index;
             if (map_.getIndex(point_position, index)) {
-                map_.at(target_layer, index) = 1.0;
-                // map_.at(other_layer, index) = 0.0;
+                map_.at("traversability", index) = traversability_value;
+                map_.at("color", index) = packed_color;
             }
         }
+
         auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
         grid_map_pub_->publish(std::move(output_msg));
-        RCLCPP_INFO_ONCE(this->get_logger(), "Grid map published.");
     }
 
-    // member variables
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_pub_;
-    rclcpp::Subscription<traversability_msgs::msg::RegionData>::SharedPtr region_data_sub_;
+    rclcpp::Subscription<traversability_msgs::msg::ClassifiedRegion>::SharedPtr classified_region_sub_;
     grid_map::GridMap map_;
 };
 
