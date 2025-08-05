@@ -14,6 +14,11 @@ find_package(grid_map_core REQUIRED)
 find_package(traversability_msgs REQUIRED)
 
 add_executable(traversability_publisher_ros2 src/traversability_publisher_ros2.cpp)
+
+target_include_directories(traversability_publisher_ros2 PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 ament_target_dependencies(
   traversability_publisher_ros2 
   rclcpp 
@@ -25,6 +30,11 @@ ament_target_dependencies(
 install(TARGETS
   traversability_publisher_ros2
   DESTINATION lib/${PROJECT_NAME})
+
+install(
+  DIRECTORY include/
+  DESTINATION include
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
