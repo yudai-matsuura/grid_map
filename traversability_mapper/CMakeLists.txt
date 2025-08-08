@@ -12,6 +12,8 @@ find_package(sensor_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
 find_package(grid_map_core REQUIRED)
 find_package(traversability_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 add_executable(traversability_publisher_ros2 src/traversability_publisher_ros2.cpp)
 
@@ -25,6 +27,8 @@ ament_target_dependencies(
   grid_map_ros 
   grid_map_core
   sensor_msgs
+  tf2_ros
+  tf2_geometry_msgs
   traversability_msgs)
 
 install(TARGETS
@@ -34,6 +38,14 @@ install(TARGETS
 install(
   DIRECTORY include/
   DESTINATION include
+)
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+install(
+  DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

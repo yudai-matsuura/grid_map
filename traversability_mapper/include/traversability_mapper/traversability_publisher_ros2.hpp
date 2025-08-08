@@ -21,6 +21,9 @@
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/GridMapMath.hpp>
 #include <grid_map_msgs/msg/grid_map.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
@@ -41,7 +44,9 @@ private:
     rclcpp::Subscription<traversability_msgs::msg::ClassifiedRegion>::SharedPtr classified_region_sub_;
     // Variables
     grid_map::GridMap map_;
-};
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+    };
 
 
 #endif // TRAVERSABILITY_PUBLISHER_HPP
