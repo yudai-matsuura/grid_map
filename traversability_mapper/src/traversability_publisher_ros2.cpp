@@ -27,6 +27,13 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+
+  // 2D投影用のタイマーを初期化 (50ms周期でコールバックを呼ぶ)
+  projection_timer_ = this->create_wall_timer(
+      std::chrono::milliseconds(50),
+      std::bind(&TraversabilityPublisher::projection_timer_callback, this));
+
   // Initialize grid map
   map_.setFrameId("odom");
   map_.setGeometry(grid_map::Length(5.0, 5.0), 0.05);
@@ -131,6 +138,47 @@ Eigen::Vector3f TraversabilityPublisher::getRainbowColor(float value) {
   return rgb;
 }
 
+void TraversabilityPublisher::projection_timer_callback()
+{
+  geometry_msgs::msg::TransformStamped t;
+  try {
+      // odom座標系に対するbase_linkの現在の姿勢を取得
+      t = tf_buffer_->lookupTransform("odom", "base_link", tf2::TimePointZero);
+  } catch (const tf2::TransformException & ex) {
+      // 起動直後などでTFがまだ利用できない場合は警告を出して終了
+      RCLCPP_WARN(this->get_logger(), "Could not get 'base_link' transform: %s", ex.what());
+      return;
+  }
+
+  // 新しいTransformStampedを作成し、2D投影した姿勢を設定
+  geometry_msgs::msg::TransformStamped t_2d;
+  t_2d.header.stamp = this->get_clock()->now();
+  t_2d.header.frame_id = "odom";
+  t_2d.child_frame_id = "base_link_2d"; // 新しいフレーム名
+
+  // XとYはそのまま、Zは0に
+  t_2d.transform.translation.x = t.transform.translation.x;
+  t_2d.transform.translation.y = t.transform.translation.y;
+  t_2d.transform.translation.z = 0.0;
+
+  // クォータニオンからRPY（ロール、ピッチ、ヨー）を取得
+  tf2::Quaternion q(t.transform.rotation.x, t.transform.rotation.y, t.transform.rotation.z, t.transform.rotation.w);
+  tf2::Matrix3x3 m(q);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+
+  // ヨー角だけを使って新しいクォータニオンを生成
+  tf2::Quaternion q_2d;
+  q_2d.setRPY(0, 0, yaw); // ロールとピッチを0に
+
+  t_2d.transform.rotation.x = q_2d.x();
+  t_2d.transform.rotation.y = q_2d.y();
+  t_2d.transform.rotation.z = q_2d.z();
+  t_2d.transform.rotation.w = q_2d.w();
+
+  // 新しいTFをブロードキャスト
+  tf_broadcaster_->sendTransform(t_2d);
+}
 
 int main(int argc, char * argv[])
 {

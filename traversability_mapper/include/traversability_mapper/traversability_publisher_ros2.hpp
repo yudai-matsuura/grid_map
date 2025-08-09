@@ -24,6 +24,9 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
@@ -33,21 +36,29 @@
 class TraversabilityPublisher : public rclcpp::Node
 {
 public:
-    TraversabilityPublisher();
+  TraversabilityPublisher();
 
 private:
-    void classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg);
-    Eigen::Vector3f getRainbowColor(float value);
+  // Classify region
+  void classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg);
+  // make gradation color
+  Eigen::Vector3f getRainbowColor(float value);
+  // project link to 2D map
+  void projection_timer_callback();
 
-    // Publisher
-    rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_pub_;
-    // Subscriber
-    rclcpp::Subscription<traversability_msgs::msg::ClassifiedRegion>::SharedPtr classified_region_sub_;
-    // Variables
-    grid_map::GridMap map_;
-    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
-    };
+
+
+  // Publisher
+  rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_pub_;
+  // Subscriber
+  rclcpp::Subscription<traversability_msgs::msg::ClassifiedRegion>::SharedPtr classified_region_sub_;
+  // Variables
+  grid_map::GridMap map_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  rclcpp::TimerBase::SharedPtr projection_timer_;
+};
 
 
 #endif // TRAVERSABILITY_PUBLISHER_HPP
