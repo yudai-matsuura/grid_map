@@ -37,6 +37,7 @@ public:
 
 private:
     void classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg);
+    Eigen::Vector3f getRainbowColor(float value);
 
     // Publisher
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_pub_;

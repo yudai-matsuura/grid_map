@@ -46,36 +46,29 @@ void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs
 
   float traversability_value = 0.0;
   float packed_color = 0.0;
+  float normalized_roughness = msg->roughness;
+  normalized_roughness = std::max(0.0f, std::min(1.0f, normalized_roughness));
 
+  traversability_value = normalized_roughness;
 
-  if (msg->classification == traversability_msgs::msg::ClassifiedRegion::CLASSIFICATION_WHEEL) {
-      traversability_value = 1.0;
-      Eigen::Vector3f rgb(0.0f, 0.0f, 1.0f);  // Blue (R, G, B)
-      grid_map::colorVectorToValue(rgb, packed_color);
-  RCLCPP_INFO(this->get_logger(), "classification WHEEL !");
-  } else if (msg->classification == traversability_msgs::msg::ClassifiedRegion::CLASSIFICATION_GRIPPER) {
-      traversability_value = 2.0;
-      Eigen::Vector3f rgb(0.0f, 1.0f, 0.0f);  // Green (R, G, B)
-      grid_map::colorVectorToValue(rgb, packed_color);
-      RCLCPP_INFO(this->get_logger(), "classification GRIPPER !");
-  } else {
-      return;
-  }
+  // Map color
+  Eigen::Vector3f rgb = getRainbowColor(normalized_roughness);
+  grid_map::colorVectorToValue(rgb, packed_color);
 
   const sensor_msgs::msg::PointCloud2& pointcloud = msg->region_pointcloud;
   try {
-    // 1. ロボットの現在位置（odom座標系でのbase_linkの位置）を取得
+    // Get the robot's current position
     geometry_msgs::msg::TransformStamped robot_pose_transform;
-    std::string robot_frame = "base_link"; // ロボットの基準フレーム
+    std::string robot_frame = "base_link";
     robot_pose_transform = tf_buffer_->lookupTransform(map_.getFrameId(), robot_frame, tf2::TimePointZero);
 
-    // 2. 地図の中心をロボットの現在位置に移動
+    // 2. Move the center of the map to the robot's current position.
     grid_map::Position robot_position(robot_pose_transform.transform.translation.x, robot_pose_transform.transform.translation.y);
     map_.move(robot_position);
 
   } catch (tf2::TransformException &ex) {
     RCLCPP_WARN(this->get_logger(), "Could not get robot pose to move map: %s", ex.what());
-    // 地図を移動できなくても処理は続行する
+    // Processing continues even if the map cannot be moved.
   }
 
   geometry_msgs::msg::TransformStamped transform_stamped;
@@ -90,7 +83,7 @@ void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs
 for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_y(pointcloud, "y"), iter_z(pointcloud, "z");
       iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z)
   {
-      // 修正点: base_link座標系の点を準備
+      // Prepare points in the base_link coordinate system
       geometry_msgs::msg::PointStamped point_in_source_frame;
       point_in_source_frame.header.frame_id = pointcloud.header.frame_id;
       point_in_source_frame.header.stamp = pointcloud.header.stamp;
@@ -98,11 +91,11 @@ for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_
       point_in_source_frame.point.y = *iter_y;
       point_in_source_frame.point.z = *iter_z;
 
-      // 修正点: odom座標系に点を変換
+      // Transform points to the odom coordinate system
       geometry_msgs::msg::PointStamped point_in_target_frame;
       tf2::doTransform(point_in_source_frame, point_in_target_frame, transform_stamped);
 
-      // 修正点: 変換後の座標を使用
+      // Use the transformed coordinates
       grid_map::Position point_position(point_in_target_frame.point.x, point_in_target_frame.point.y);
       grid_map::Index index;
       if (map_.getIndex(point_position, index)) {
@@ -115,6 +108,29 @@ for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_
   grid_map_pub_->publish(std::move(output_msg));
   // RCLCPP_INFO(this->get_logger(), "grid map published !");
 }
+
+Eigen::Vector3f TraversabilityPublisher::getRainbowColor(float value) {
+  Eigen::Vector3f rgb(0.0f, 0.0f, 0.0f);
+  if (value < 0.25f) {
+      rgb.x() = 0.0f;
+      rgb.y() = 4.0f * value;
+      rgb.z() = 1.0f;
+  } else if (value < 0.5f) {
+      rgb.x() = 0.0f;
+      rgb.y() = 1.0f;
+      rgb.z() = 1.0f - 4.0f * (value - 0.25f);
+  } else if (value < 0.75f) {
+      rgb.x() = 4.0f * (value - 0.5f);
+      rgb.y() = 1.0f;
+      rgb.z() = 0.0f;
+  } else {
+      rgb.x() = 1.0f;
+      rgb.y() = 1.0f - 4.0f * (value - 0.75f);
+      rgb.z() = 0.0f;
+  }
+  return rgb;
+}
+
 
 int main(int argc, char * argv[])
 {
