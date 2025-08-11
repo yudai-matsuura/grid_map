@@ -12,10 +12,10 @@ def generate_launch_description():
        'subscribe_imu':True,
        'approx_sync':True,
        'wait_imu_to_init':True,
-       'queue_size':100,
+       'queue_size':10,
        'Odom/Strategy':'1',
        'Vis/MinInliers':'8',
-       'OdomF2M/MaxSize':'2000',
+       'OdomF2M/MaxSize':'3000',
        'Reg/Force3DoF':'false'}
 
    remappings=[
@@ -30,6 +30,12 @@ def generate_launch_description():
            package='rtabmap_odom', executable='rgbd_odometry', output='screen',
            parameters=[parameters],
            remappings=remappings),
+
+       Node(
+           package='traversability_mapper',
+           executable='traversability_publisher_ros2',
+           name="traversability_publisher_ros2",
+           output='screen',),
 
        # Compute quaternion of the IMU
        Node(
