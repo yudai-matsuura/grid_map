@@ -1,50 +1,101 @@
+# launch/your_launch_file.py
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch_ros.actions import Node, ComposableNodeContainer
+from launch_ros.descriptions import ComposableNode
 
 def generate_launch_description():
-   parameters={
-       'frame_id':'base_link',
-       'subscribe_depth':True,
-       'subscribe_rgb':True,
-       'subscribe_odom_info':True,
-       'subscribe_imu':True,
-       'approx_sync':True,
-       'wait_imu_to_init':True,
-       'queue_size':10,
-       'Odom/Strategy':'1',
-       'Vis/MinInliers':'8',
-       'OdomF2M/MaxSize':'3000',
-       'Reg/Force3DoF':'false'}
+    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
 
-   remappings=[
-       ('imu', '/imu/data'),
-       ('rgb/image', '/throttle/camera/color/image_raw'),
-       ('rgb/camera_info', '/throttle/camera/color/camera_info'),
-       ('depth/image', '/throttle/camera/depth/image_rect_raw')]
-   
-   return LaunchDescription([
-       # Nodes to launch       
-       Node(
-           package='rtabmap_odom', executable='rgbd_odometry', output='screen',
-           parameters=[parameters],
-           remappings=remappings),
+    rtabmap_params = {
+        'frame_id': 'base_link',
+        'subscribe_depth': False,
+        'subscribe_rgb': False,
+        'subscribe_rgbd': True,
+        'subscribe_odom_info': True,
+        'subscribe_imu': True,
+        'approx_sync': False,
+        'wait_imu_to_init': True,
+        'queue_size': 30,
+        'Vis/MinInliers': '8',
+        'Odom/Strategy': '1',
+        'Odom/ResetCountdown': '1',
+        'OdomF2M/MaxSize': '2000',
+        'Odom/ScanMatching/Enabled': 'true',
+        'Odom/ScanMatching/MaxCorrespondenceDistance': '0.1',
+        'Reg/Force3DoF': 'false'
+    }
 
-       Node(
-           package='traversability_mapper',
-           executable='traversability_publisher_ros2',
-           name="traversability_publisher_ros2",
-           output='screen',),
+    odom_remappings = [
+        ('imu', '/imu/data/filtered'),
+        ('rgbd_image', '/rgbd_image')]
 
-       # Compute quaternion of the IMU
-       Node(
-           package='imu_filter_madgwick', executable='imu_filter_madgwick_node', output='screen',
-           parameters=[{'use_mag': False, 
-                        'world_frame':'enu', 
-                        'publish_tf':False}],
-           remappings=[('imu/data_raw', '/imu/data')]),
+    imu_filter_remappings = [
+        ('imu/data_raw', '/imu/data'),
+        ('imu/data', '/imu/data/filtered')] 
 
-   ])
+    traversability_remappings = [
+        ('/classified_region', '/classified_region')]
 
 
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='true',
+            description='Use simulation (Gazebo) clock if true'),
+
+        ComposableNodeContainer(
+            name='rtabmap_container',
+            namespace='',
+            package='rclcpp_components',
+            executable='component_container',
+            composable_node_descriptions=[
+                # 1. Syns and register components
+                ComposableNode(
+                    package='rtabmap_sync',
+                    plugin='rtabmap_sync::RGBDSync',
+                    name='rgbd_sync',
+                    parameters=[{
+                        'approx_sync': True, 
+                        'use_sim_time': use_sim_time,
+                        'approx_sync_max_interval': 0.7
+                    }],
+                    remappings=[
+                        ('rgb/image', '/throttle/camera/color/image_raw'),
+                        ('rgb/camera_info', '/throttle/camera/color/camera_info'),
+                        ('depth/image', '/throttle/camera/depth/image_rect_raw')
+                    ]),
+                # 2. Calculate odometry components
+                ComposableNode(
+                    package='rtabmap_odom',
+                    plugin='rtabmap_odom::RGBDOdometry',
+                    name='rgbd_odometry',
+                    parameters=[rtabmap_params, {'use_sim_time': use_sim_time}],
+                    remappings=odom_remappings),
+            ],
+            output='screen',
+        ),
+
+        Node(
+            package='traversability_mapper',
+            executable='traversability_publisher_ros2',
+            name='traversability_publisher_ros2',
+            output='screen',
+            parameters=[{'use_sim_time': use_sim_time}],
+            remappings=traversability_remappings
+        ),
+
+        Node(
+            package='imu_filter_madgwick', 
+            executable='imu_filter_madgwick_node', 
+            name='imu_filter',
+            output='screen',
+            parameters=[{'use_mag': False, 
+                         'world_frame':'enu', 
+                         'publish_tf':False,
+                         'use_sim_time': use_sim_time}],
+            remappings=imu_filter_remappings
+        ),
+    ])
