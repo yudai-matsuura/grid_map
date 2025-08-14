@@ -5,9 +5,17 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
+from ament_index_python.packages import get_package_share_directory
+import os
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+
+    rviz_config_path = os.path.join(
+        get_package_share_directory('traversability_mapper'),
+        'config',
+        '2d_grid_map_config.rviz'
+    )
 
     rtabmap_params = {
         'frame_id': 'base_link',
@@ -98,4 +106,12 @@ def generate_launch_description():
                          'use_sim_time': use_sim_time}],
             remappings=imu_filter_remappings
         ),
+
+        Node(
+            package="rviz2",
+            executable="rviz2",
+            name="rviz2",
+            output="screen",
+            arguments=['-d', rviz_config_path],
+        )
     ])
