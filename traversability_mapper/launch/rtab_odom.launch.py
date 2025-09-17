@@ -32,7 +32,7 @@ def generate_launch_description():
         'Odom/ResetCountdown': '1',
         'OdomF2M/MaxSize': '2000',
         'Odom/ScanMatching/Enabled': 'true',
-        'Odom/ScanMatching/MaxCorrespondenceDistance': '0.1',
+        'Odom/ScanMatching/MaxCorrespondenceDistance': '0.8',
         'Reg/Force3DoF': 'false'
     }
 

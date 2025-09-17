@@ -59,8 +59,12 @@ void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs
 
   traversability_value = normalized_suitability;
 
+  // Clamp value to 25 ~ 75 for fuzzy
+  float clamped_suitability = std::max(25.0f, std::min(suitability, 75.0f));
+  float renormalized_for_color = (clamped_suitability - 25.0f) / 50.0f; // 50.0fは(75.0f-25.0f)
+
   // Map color
-  Eigen::Vector3f rgb = getRainbowColor(1.0f - normalized_suitability);
+  Eigen::Vector3f rgb = getRainbowColor(1.0f - renormalized_for_color);
   grid_map::colorVectorToValue(rgb, packed_color);
 
   const sensor_msgs::msg::PointCloud2& pointcloud = msg->region_pointcloud;
@@ -119,22 +123,16 @@ for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_
 
 Eigen::Vector3f TraversabilityPublisher::getRainbowColor(float value) {
   Eigen::Vector3f rgb(0.0f, 0.0f, 0.0f);
-  if (value < 0.25f) {
-      rgb.x() = 0.0f;
-      rgb.y() = 4.0f * value;
-      rgb.z() = 1.0f;
-  } else if (value < 0.5f) {
-      rgb.x() = 0.0f;
-      rgb.y() = 1.0f;
-      rgb.z() = 1.0f - 4.0f * (value - 0.25f);
-  } else if (value < 0.75f) {
-      rgb.x() = 4.0f * (value - 0.5f);
-      rgb.y() = 1.0f;
-      rgb.z() = 0.0f;
+  if (value < 0.5f) {
+    float t = value / 0.5f;
+    rgb.x() = t;
+    rgb.y() = 1.0f;
+    rgb.z() = 0.0f;
   } else {
-      rgb.x() = 1.0f;
-      rgb.y() = 1.0f - 4.0f * (value - 0.75f);
-      rgb.z() = 0.0f;
+    float t = (value - 0.5f) / 0.5f; 
+    rgb.x() = 1.0f;
+    rgb.y() = 1.0f - t;
+    rgb.z() = 0.0f;
   }
   return rgb;
 }
