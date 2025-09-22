@@ -61,41 +61,38 @@ void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs
   const float kSuitabilityMin = 25.0f;
   const float kSuitabilityMax = 75.0f;
   float clamped_suitability = std::max(kSuitabilityMin, std::min(suitability, kSuitabilityMax));
-  float renormalized_for_color = (clamped_suitability - kSuitabilityMin) / 50.0f; // 50.0f is (kSuitabilityMax-kSuitabilityMin)
+  float renormalized_for_color = (clamped_suitability - kSuitabilityMin) / (kSuitabilityMax - kSuitabilityMin);
 
   // Map color
   Eigen::Vector3f rgb = getGradationColor(1.0f - renormalized_for_color);
   grid_map::colorVectorToValue(rgb, packed_color);
 
-  const sensor_msgs::msg::PointCloud2& pointcloud = msg->region_pointcloud;
-  try {
-    // Get the robot's current position
-    geometry_msgs::msg::TransformStamped robot_pose_transform;
-    std::string robot_frame = "base_link";
-    robot_pose_transform = tf_buffer_->lookupTransform(map_.getFrameId(), robot_frame, tf2::TimePointZero);
-
-    // Move the center of the map to the robot's current position.
-    grid_map::Position robot_position(robot_pose_transform.transform.translation.x, robot_pose_transform.transform.translation.y);
+  // Get the robot's current position
+  std::string source_frame = "base_link";
+  std::string target_frame = map_.getFrameId(); // odom frame
+  auto robot_tf = lookupTransform(target_frame, source_frame);
+  // Move the center of the map to the robot's current position.
+  if (robot_tf) {
+    grid_map::Position robot_position(robot_tf->transform.translation.x, robot_tf->transform.translation.y);
     map_.move(robot_position);
-
-  } catch (tf2::TransformException &ex) {
-    RCLCPP_WARN(this->get_logger(), "Could not get robot pose to move map: %s", ex.what());
-    // Processing continues even if the map cannot be moved.
   }
 
-  geometry_msgs::msg::TransformStamped transform_stamped;
-  try {
-    transform_stamped = tf_buffer_->lookupTransform(map_.getFrameId(), pointcloud.header.frame_id, tf2::TimePointZero);
-  } catch (tf2::TransformException &ex) {
-    RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s",
-                pointcloud.header.frame_id.c_str(), map_.getFrameId().c_str(), ex.what());
+
+  // Transform point cloud to odom frame
+  const sensor_msgs::msg::PointCloud2 & pointcloud = msg->region_pointcloud;
+  auto transform_stamped_opt = lookupTransform(map_.getFrameId(), pointcloud.header.frame_id);
+  if (!transform_stamped_opt) {
+    RCLCPP_WARN(this->get_logger(), "Could not get transform from %s to %s",
+                pointcloud.header.frame_id.c_str(), map_.getFrameId().c_str());
     return;
   }
+  auto transform_stamped = *transform_stamped_opt;
 
+  // Process each point in the point cloud
 for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_y(pointcloud, "y"), iter_z(pointcloud, "z");
       iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z)
   {
-      // Prepare points in the base_link coordinate system
+      // Prepare points in the source frame (from point cloud header)
       geometry_msgs::msg::PointStamped point_in_source_frame;
       point_in_source_frame.header.frame_id = pointcloud.header.frame_id;
       point_in_source_frame.header.stamp = pointcloud.header.stamp;
@@ -103,19 +100,23 @@ for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_
       point_in_source_frame.point.y = *iter_y;
       point_in_source_frame.point.z = *iter_z;
 
-      // Transform points to the odom coordinate system
-      geometry_msgs::msg::PointStamped point_in_target_frame;
-      tf2::doTransform(point_in_source_frame, point_in_target_frame, transform_stamped);
+      // Transform points to the odom coordinate
+      auto transformed_point_opt = transformPoint(point_in_source_frame, transform_stamped);
+      if (!transformed_point_opt) {
+          RCLCPP_WARN(this->get_logger(), "Could not transform point");
+          continue;
+      }
 
-      // Use the transformed coordinates
-      grid_map::Position point_position(point_in_target_frame.point.x, point_in_target_frame.point.y);
+      grid_map::Position point_position(transformed_point_opt->point.x, transformed_point_opt->point.y);
       grid_map::Index index;
       if (map_.getIndex(point_position, index)) {
+          // Write score and color information to cells
           map_.at("traversability", index) = traversability_value;
           map_.at("color", index) = packed_color;
       }
   }
 
+  // Publish grid map
   auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
   grid_map_pub_->publish(std::move(output_msg));
 }
@@ -134,6 +135,33 @@ Eigen::Vector3f TraversabilityPublisher::getGradationColor(float value) {
     rgb.z() = 0.0f;
   }
   return rgb;
+}
+
+std::optional<geometry_msgs::msg::TransformStamped> TraversabilityPublisher::lookupTransform(
+  const std::string & target_frame,
+  const std::string & source_frame)
+{
+  try {
+    return tf_buffer_->lookupTransform(target_frame, source_frame, tf2::TimePointZero);
+  } catch (tf2::TransformException & ex) {
+    RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s",
+                source_frame.c_str(), target_frame.c_str());
+    return std::nullopt;
+  }
+}
+
+std::optional<geometry_msgs::msg::PointStamped> TraversabilityPublisher::transformPoint(
+  const geometry_msgs::msg::PointStamped & point_in,
+  const geometry_msgs::msg::TransformStamped & transform)
+{
+  try {
+    geometry_msgs::msg::PointStamped point_out;
+    tf2::doTransform(point_in, point_out, transform);
+    return point_out;
+  } catch (tf2::TransformException & ex){
+    RCLCPP_WARN(this->get_logger(), "Could not transform point");
+    return std::nullopt;
+  }
 }
 
 void TraversabilityPublisher::projection_timer_callback()
