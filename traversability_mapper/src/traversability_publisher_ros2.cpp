@@ -50,14 +50,12 @@ void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs
   map_.setTimestamp(this->get_clock()->now().nanoseconds());
   float traversability_value = 0.0;
   float packed_color = 0.0;
-
   float suitability = msg->wheel_suitability;
   float normalized_suitability = suitability / 100;
   normalized_suitability = std::max(0.0f, std::min(1.0f, normalized_suitability));
-
   traversability_value = normalized_suitability;
 
-  // Clamp value to 25 ~ 75 for fuzzy
+  // Clamp value to kSuitabilityMin ~ kSuitabilityMax for fuzzy
   const float kSuitabilityMin = 25.0f;
   const float kSuitabilityMax = 75.0f;
   float clamped_suitability = std::max(kSuitabilityMin, std::min(suitability, kSuitabilityMax));
@@ -76,7 +74,6 @@ void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs
     grid_map::Position robot_position(robot_tf->transform.translation.x, robot_tf->transform.translation.y);
     map_.move(robot_position);
   }
-
 
   // Transform point cloud to odom frame
   const sensor_msgs::msg::PointCloud2 & pointcloud = msg->region_pointcloud;
@@ -115,7 +112,6 @@ for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_
           map_.at("color", index) = packed_color;
       }
   }
-
   // Publish grid map
   auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
   grid_map_pub_->publish(std::move(output_msg));

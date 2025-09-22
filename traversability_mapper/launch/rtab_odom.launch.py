@@ -24,15 +24,15 @@ def generate_launch_description():
         'subscribe_rgbd': True,
         'subscribe_odom_info': True,
         'subscribe_imu': True,
-        'approx_sync': False,
+        'approx_sync': True,
         'wait_imu_to_init': True,
-        'queue_size': 30,
-        'Vis/MinInliers': '8',
+        'queue_size': 10,
+        'Vis/MinInliers': '5',
         'Odom/Strategy': '1',
         'Odom/ResetCountdown': '1',
         'OdomF2M/MaxSize': '2000',
         'Odom/ScanMatching/Enabled': 'true',
-        'Odom/ScanMatching/MaxCorrespondenceDistance': '0.8',
+        'Odom/ScanMatching/MaxCorrespondenceDistance': '0.1',
         'Reg/Force3DoF': 'false'
     }
 
