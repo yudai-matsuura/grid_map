@@ -42,7 +42,7 @@ private:
   // Classify region
   void classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg);
   // make gradation color
-  Eigen::Vector3f getRainbowColor(float value);
+  Eigen::Vector3f getGradationColor(float value);
   // project link to 2D map
   void projection_timer_callback();
 

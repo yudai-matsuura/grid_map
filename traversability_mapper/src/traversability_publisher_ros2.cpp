@@ -47,8 +47,6 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 
 void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg)
 {
-  // RCLCPP_INFO(this->get_logger(), "classifiedRegionCallback is called !");
-
   map_.setTimestamp(this->get_clock()->now().nanoseconds());
   float traversability_value = 0.0;
   float packed_color = 0.0;
@@ -60,11 +58,13 @@ void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs
   traversability_value = normalized_suitability;
 
   // Clamp value to 25 ~ 75 for fuzzy
-  float clamped_suitability = std::max(25.0f, std::min(suitability, 75.0f));
-  float renormalized_for_color = (clamped_suitability - 25.0f) / 50.0f; // 50.0fは(75.0f-25.0f)
+  const float kSuitabilityMin = 25.0f;
+  const float kSuitabilityMax = 75.0f;
+  float clamped_suitability = std::max(kSuitabilityMin, std::min(suitability, kSuitabilityMax));
+  float renormalized_for_color = (clamped_suitability - kSuitabilityMin) / 50.0f; // 50.0f is (kSuitabilityMax-kSuitabilityMin)
 
   // Map color
-  Eigen::Vector3f rgb = getRainbowColor(1.0f - renormalized_for_color);
+  Eigen::Vector3f rgb = getGradationColor(1.0f - renormalized_for_color);
   grid_map::colorVectorToValue(rgb, packed_color);
 
   const sensor_msgs::msg::PointCloud2& pointcloud = msg->region_pointcloud;
@@ -74,7 +74,7 @@ void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs
     std::string robot_frame = "base_link";
     robot_pose_transform = tf_buffer_->lookupTransform(map_.getFrameId(), robot_frame, tf2::TimePointZero);
 
-    // 2. Move the center of the map to the robot's current position.
+    // Move the center of the map to the robot's current position.
     grid_map::Position robot_position(robot_pose_transform.transform.translation.x, robot_pose_transform.transform.translation.y);
     map_.move(robot_position);
 
@@ -118,10 +118,9 @@ for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_
 
   auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
   grid_map_pub_->publish(std::move(output_msg));
-  // RCLCPP_INFO(this->get_logger(), "grid map published !");
 }
 
-Eigen::Vector3f TraversabilityPublisher::getRainbowColor(float value) {
+Eigen::Vector3f TraversabilityPublisher::getGradationColor(float value) {
   Eigen::Vector3f rgb(0.0f, 0.0f, 0.0f);
   if (value < 0.5f) {
     float t = value / 0.5f;
