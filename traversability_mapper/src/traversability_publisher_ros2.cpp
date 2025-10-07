@@ -21,12 +21,14 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 
   // Subscriber
   classified_region_sub_ = this->create_subscription<traversability_msgs::msg::ClassifiedRegion>(
-      "/classified_region", 10, std::bind(&TraversabilityPublisher::classifiedRegionCallback, this, std::placeholders::_1));
+    "/classified_region", 10, std::bind(&TraversabilityPublisher::classifiedRegionCallback, this, std::placeholders::_1));
+
+  grid_cell_array_sub_ = this->create_subscription<traversability_msgs::msg::GridCellArray>(
+    "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
 
   // TF
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   // Initialize
@@ -38,11 +40,40 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   map_.setFrameId("odom");
   map_.setGeometry(grid_map::Length(5.0, 5.0), 0.05);
   map_.add("traversability", 0.0);
+  map_.add("roughness", 0.0);
   map_.add("color", 0.0);
   map_.setBasicLayers({"traversability", "color"});
 
   RCLCPP_INFO(this->get_logger(), "Created map with size %f x %f m (%i x %i cells).",
           map_.getLength().x(), map_.getLength().y(), map_.getSize()(0), map_.getSize()(1));
+}
+
+void TraversabilityPublisher::gridCellArrayCallback(
+  const traversability_msgs::msg::GridCellArray::SharedPtr msg)
+{
+  std::cout << "gridCellArrayCallback is called" << std::endl;
+  map_.setTimestamp(this->get_clock()->now().nanoseconds());
+
+  for (const auto &cell : msg->cells) {
+    grid_map::Position pos(cell.position.x, cell.position.y);
+    grid_map::Index index;
+    if (!map_.getIndex(pos, index)) continue;
+
+    // Roughness
+    float roughness = cell.roughness;
+    map_.at("roughness", index) = roughness;
+
+    // convert roughness to color map
+    float normalized = std::max(0.0f, std::min(1.0f, roughness / 0.03f));  // スケール調整
+    Eigen::Vector3f rgb = getGradationColor(1.0f - normalized);
+    float packed_color;
+    grid_map::colorVectorToValue(rgb, packed_color);
+    map_.at("color", index) = packed_color;
+  }
+
+  // Publish grid map
+  auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
+  grid_map_pub_->publish(std::move(output_msg));
 }
 
 void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg)

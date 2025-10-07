@@ -31,6 +31,8 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include "traversability_msgs/msg/classified_region.hpp"
+#include "traversability_msgs/msg/grid_cell_data.hpp"
+#include "traversability_msgs/msg/grid_cell_array.hpp"
 
 
 class TraversabilityPublisher : public rclcpp::Node
@@ -41,6 +43,8 @@ public:
 private:
   // Classify region
   void classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg);
+
+  void gridCellArrayCallback(const traversability_msgs::msg::GridCellArray::SharedPtr msg);
 
   // make gradation color
   Eigen::Vector3f getGradationColor(float value);
@@ -64,6 +68,7 @@ private:
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_pub_;
   // Subscriber
   rclcpp::Subscription<traversability_msgs::msg::ClassifiedRegion>::SharedPtr classified_region_sub_;
+  rclcpp::Subscription<traversability_msgs::msg::GridCellArray>::SharedPtr grid_cell_array_sub_;
   // Variables
   grid_map::GridMap map_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
