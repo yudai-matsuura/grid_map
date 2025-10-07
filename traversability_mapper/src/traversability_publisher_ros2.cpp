@@ -64,8 +64,8 @@ void TraversabilityPublisher::gridCellArrayCallback(
     map_.at("roughness", index) = roughness;
 
     // convert roughness to color map
-    float normalized = std::max(0.0f, std::min(1.0f, roughness / 0.03f));  // スケール調整
-    Eigen::Vector3f rgb = getGradationColor(1.0f - normalized);
+    float normalized = std::max(0.0f, std::min(1.0f, roughness / 0.08f));  // スケール調整
+    Eigen::Vector3f rgb = getGradationColor(normalized);
     float packed_color;
     grid_map::colorVectorToValue(rgb, packed_color);
     map_.at("color", index) = packed_color;
