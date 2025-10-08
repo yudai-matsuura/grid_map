@@ -21,9 +21,9 @@ def generate_launch_description():
         'subscribe_rgb': False,
         'subscribe_rgbd': True,
         'subscribe_odom_info': True,
-        'subscribe_imu': True,
+        'subscribe_imu': False,
         'approx_sync': True,
-        'wait_imu_to_init': True,
+        'wait_imu_to_init': False,
         'queue_size': 10,
         'Vis/MinInliers': '5',
         'Odom/Strategy': '1',
@@ -35,12 +35,7 @@ def generate_launch_description():
     }
 
     odom_remappings = [
-        ('imu', '/imu/data/filtered'),
         ('rgbd_image', '/rgbd_image')]
-
-    imu_filter_remappings = [
-        ('imu/data_raw', '/imu/data'),
-        ('imu/data', '/imu/data/filtered')] 
 
     traversability_remappings = [
         ('/classified_region', '/classified_region')]
@@ -69,9 +64,9 @@ def generate_launch_description():
                         'approx_sync_max_interval': 0.7
                     }],
                     remappings=[
-                        ('rgb/image', '/throttle/camera/color/image_raw'),
-                        ('rgb/camera_info', '/throttle/camera/color/camera_info'),
-                        ('depth/image', '/throttle/camera/depth/image_rect_raw')
+                        ('rgb/image', '/camera/camera/color/image_raw'),
+                        ('rgb/camera_info', '/camera/camera/color/camera_info'),
+                        ('depth/image', '/camera/camera/depth/image_rect_raw')
                     ]),
                 # 2. Calculate odometry components
                 ComposableNode(
@@ -91,18 +86,6 @@ def generate_launch_description():
             output='screen',
             parameters=[{'use_sim_time': use_sim_time}],
             remappings=traversability_remappings
-        ),
-
-        Node(
-            package='imu_filter_madgwick', 
-            executable='imu_filter_madgwick_node', 
-            name='imu_filter',
-            output='screen',
-            parameters=[{'use_mag': False, 
-                         'world_frame':'enu', 
-                         'publish_tf':False,
-                         'use_sim_time': use_sim_time}],
-            remappings=imu_filter_remappings
         ),
 
         Node(

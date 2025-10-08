@@ -38,7 +38,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 
   // Initialize grid map
   map_.setFrameId("odom");
-  map_.setGeometry(grid_map::Length(5.0, 5.0), 0.05);
+  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.05, grid_map::Position(0.0, 0.0));
   map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
   map_.add("color", 0.0);
@@ -51,30 +51,51 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 void TraversabilityPublisher::gridCellArrayCallback(
   const traversability_msgs::msg::GridCellArray::SharedPtr msg)
 {
-  std::cout << "gridCellArrayCallback is called" << std::endl;
   map_.setTimestamp(this->get_clock()->now().nanoseconds());
 
-  for (const auto &cell : msg->cells) {
-    grid_map::Position pos(cell.position.x, cell.position.y);
-    grid_map::Index index;
-    if (!map_.getIndex(pos, index)) continue;
+  // === 追加: ロボット位置で地図を移動 ===
+std::string source_frame = "base_link";
+std::string target_frame = map_.getFrameId();  // 通常 "odom"
+auto tf_opt = lookupTransform(target_frame, source_frame);
+if (!tf_opt) {
+  RCLCPP_WARN(this->get_logger(), "TF not available between %s and %s",
+              source_frame.c_str(), target_frame.c_str());
+  return;
+}
+auto transform_stamped = *tf_opt;
 
-    // Roughness
-    float roughness = cell.roughness;
-    map_.at("roughness", index) = roughness;
+for (const auto &cell : msg->cells) {
+  // --- 座標変換 (base_link → odom)
+  geometry_msgs::msg::PointStamped point_in, point_out;
+  point_in.header.frame_id = source_frame;
+  point_in.point.x = cell.position.x;
+  point_in.point.y = cell.position.y;
+  point_in.point.z = cell.position.z;
 
-    // convert roughness to color map
-    float normalized = std::max(0.0f, std::min(1.0f, roughness / 0.08f));  // スケール調整
-    Eigen::Vector3f rgb = getGradationColor(normalized);
-    float packed_color;
-    grid_map::colorVectorToValue(rgb, packed_color);
-    map_.at("color", index) = packed_color;
-  }
+  auto transformed = transformPoint(point_in, transform_stamped);
+  if (!transformed) continue;
 
-  // Publish grid map
+  grid_map::Position pos(transformed->point.x, transformed->point.y);
+  grid_map::Index index;
+  if (!map_.getIndex(pos, index)) continue;
+
+  // --- 値書き込み
+  float roughness = cell.roughness;
+  map_.at("roughness", index) = roughness;
+
+  float normalized = std::max(0.0f, std::min(1.0f, roughness / 0.08f));
+  Eigen::Vector3f rgb = getGradationColor(normalized);
+  float packed_color;
+  grid_map::colorVectorToValue(rgb, packed_color);
+  map_.at("color", index) = packed_color;
+}
+
+
+  // === Publish grid map ===
   auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
   grid_map_pub_->publish(std::move(output_msg));
 }
+
 
 void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg)
 {
