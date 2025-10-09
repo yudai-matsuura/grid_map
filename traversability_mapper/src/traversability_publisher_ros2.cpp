@@ -44,8 +44,8 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   map_.add("slope_angle", 0.0);
   map_.add("roughness_color", 0.0);
   map_.add("slope_color", 0.0);
-  map_.add("color", 0.0);
-  map_.setBasicLayers({"traversability", "color"});
+  map_.add("traversability_color", 0.0);
+  map_.setBasicLayers({"traversability", "traversability_color"});
 
   RCLCPP_INFO(this->get_logger(), "Created map with size %f x %f m (%i x %i cells).",
           map_.getLength().x(), map_.getLength().y(), map_.getSize()(0), map_.getSize()(1));
@@ -67,6 +67,10 @@ if (!tf_opt) {
 }
 auto transform_stamped = *tf_opt;
 
+float slope_angle_critical = 30.0f;
+float w_r = 0.7;
+float w_s = 0.3;
+
 for (const auto &cell : msg->cells) {
   // base_link → odom
   geometry_msgs::msg::PointStamped point_in, point_out;
@@ -85,8 +89,7 @@ for (const auto &cell : msg->cells) {
   // Roughness
   float roughness = cell.roughness;
   map_.at("roughness", index) = roughness;
-  float normalized_roughness = std::max(0.0f, std::min(1.0f, roughness / 0.08f));
-  Eigen::Vector3f rgb_r = getGradationColor(normalized_roughness);
+  Eigen::Vector3f rgb_r = getGradationColor(roughness);
   float packed_color_r;
   grid_map::colorVectorToValue(rgb_r, packed_color_r);
   map_.at("roughness_color", index) = packed_color_r;
@@ -94,13 +97,21 @@ for (const auto &cell : msg->cells) {
   // Slope angle
   float slope_angle = cell.angle;
   map_.at("slope_angle", index) = slope_angle;
-  float normalized_angle = std::clamp(slope_angle / 45.0f, 0.0f, 1.0f);
-  // 二乗補正で小角度に鈍感化（0〜0.5の変化をゆるやかに）
-  float modified_angle = std::pow(normalized_angle, 2.0f);
-  Eigen::Vector3f rgb_s = getGradationColor(modified_angle);
+  float normalized_angle_score = std::clamp(slope_angle / slope_angle_critical, 0.0f, 1.0f);
+  Eigen::Vector3f rgb_s = getGradationColor(normalized_angle_score);
   float packed_color_s;
   grid_map::colorVectorToValue(rgb_s, packed_color_s);
   map_.at("slope_color", index) = packed_color_s;
+
+  // Geometric traversability
+  float geometric_traversability = w_r * (1.0f - roughness) + w_s * (1.0f - normalized_angle_score);
+  geometric_traversability = std::clamp(geometric_traversability, 0.0f, 1.0f);
+  map_.at("traversability", index) = geometric_traversability;
+  float inverse_traversability = 1.0f - geometric_traversability;
+  Eigen::Vector3f rgb_t = getGradationColor(inverse_traversability);
+  float packed_color_t;
+  grid_map::colorVectorToValue(rgb_t, packed_color_t);
+  map_.at("traversability_color", index) = packed_color_t;
 }
 
   // === Publish grid map ===
@@ -173,7 +184,7 @@ for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_
       if (map_.getIndex(point_position, index)) {
           // Write score and color information to cells
           map_.at("traversability", index) = traversability_value;
-          map_.at("color", index) = packed_color;
+          map_.at("traversability_color", index) = packed_color;
       }
   }
   // Publish grid map
