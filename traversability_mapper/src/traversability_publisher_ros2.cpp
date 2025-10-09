@@ -38,7 +38,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 
   // Initialize grid map
   map_.setFrameId("odom");
-  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.5, grid_map::Position(0.0, 0.0));
+  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.3, grid_map::Position(0.0, 0.0));
   map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
   map_.add("slope_angle", 0.0);

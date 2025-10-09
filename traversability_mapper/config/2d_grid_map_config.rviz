@@ -66,7 +66,7 @@ Visualization Manager:
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: GridMap
-      Show Grid Lines: false
+      Show Grid Lines: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -178,25 +178,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 12.628686904907227
+      Distance: 11.11324405670166
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.9497461318969727
-        Y: -0.6680552363395691
-        Z: 0.8692280054092407
+        X: 2.6334095001220703
+        Y: -1.252795696258545
+        Z: 0.48000597953796387
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0197968482971191
+      Pitch: 1.2997965812683105
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.560405969619751
+      Yaw: 3.1254029273986816
     Saved: ~
 Window Geometry:
   Displays:
