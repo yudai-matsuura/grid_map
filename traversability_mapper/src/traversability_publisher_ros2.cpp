@@ -38,9 +38,12 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 
   // Initialize grid map
   map_.setFrameId("odom");
-  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.05, grid_map::Position(0.0, 0.0));
+  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.5, grid_map::Position(0.0, 0.0));
   map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
+  map_.add("slope_angle", 0.0);
+  map_.add("roughness_color", 0.0);
+  map_.add("slope_color", 0.0);
   map_.add("color", 0.0);
   map_.setBasicLayers({"traversability", "color"});
 
@@ -53,7 +56,7 @@ void TraversabilityPublisher::gridCellArrayCallback(
 {
   map_.setTimestamp(this->get_clock()->now().nanoseconds());
 
-  // === 追加: ロボット位置で地図を移動 ===
+  // move map by robot position
 std::string source_frame = "base_link";
 std::string target_frame = map_.getFrameId();  // 通常 "odom"
 auto tf_opt = lookupTransform(target_frame, source_frame);
@@ -65,7 +68,7 @@ if (!tf_opt) {
 auto transform_stamped = *tf_opt;
 
 for (const auto &cell : msg->cells) {
-  // --- 座標変換 (base_link → odom)
+  // base_link → odom
   geometry_msgs::msg::PointStamped point_in, point_out;
   point_in.header.frame_id = source_frame;
   point_in.point.x = cell.position.x;
@@ -79,17 +82,26 @@ for (const auto &cell : msg->cells) {
   grid_map::Index index;
   if (!map_.getIndex(pos, index)) continue;
 
-  // --- 値書き込み
+  // Roughness
   float roughness = cell.roughness;
   map_.at("roughness", index) = roughness;
+  float normalized_roughness = std::max(0.0f, std::min(1.0f, roughness / 0.08f));
+  Eigen::Vector3f rgb_r = getGradationColor(normalized_roughness);
+  float packed_color_r;
+  grid_map::colorVectorToValue(rgb_r, packed_color_r);
+  map_.at("roughness_color", index) = packed_color_r;
 
-  float normalized = std::max(0.0f, std::min(1.0f, roughness / 0.08f));
-  Eigen::Vector3f rgb = getGradationColor(normalized);
-  float packed_color;
-  grid_map::colorVectorToValue(rgb, packed_color);
-  map_.at("color", index) = packed_color;
+  // Slope angle
+  float slope_angle = cell.angle;
+  map_.at("slope_angle", index) = slope_angle;
+  float normalized_angle = std::clamp(slope_angle / 45.0f, 0.0f, 1.0f);
+  // 二乗補正で小角度に鈍感化（0〜0.5の変化をゆるやかに）
+  float modified_angle = std::pow(normalized_angle, 2.0f);
+  Eigen::Vector3f rgb_s = getGradationColor(modified_angle);
+  float packed_color_s;
+  grid_map::colorVectorToValue(rgb_s, packed_color_s);
+  map_.at("slope_color", index) = packed_color_s;
 }
-
 
   // === Publish grid map ===
   auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
