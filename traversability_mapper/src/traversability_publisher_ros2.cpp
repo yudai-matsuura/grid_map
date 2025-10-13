@@ -67,9 +67,8 @@ if (!tf_opt) {
 }
 auto transform_stamped = *tf_opt;
 
-float slope_angle_critical = 30.0f;
-float w_r = 0.7;
-float w_s = 0.3;
+float w_r = 0.5;
+float w_s = 0.5;
 
 for (const auto &cell : msg->cells) {
   // base_link → odom
@@ -97,14 +96,13 @@ for (const auto &cell : msg->cells) {
   // Slope angle
   float slope_angle = cell.angle;
   map_.at("slope_angle", index) = slope_angle;
-  float normalized_angle_score = std::clamp(slope_angle / slope_angle_critical, 0.0f, 1.0f);
-  Eigen::Vector3f rgb_s = getGradationColor(normalized_angle_score);
+  Eigen::Vector3f rgb_s = getGradationColor(slope_angle);
   float packed_color_s;
   grid_map::colorVectorToValue(rgb_s, packed_color_s);
   map_.at("slope_color", index) = packed_color_s;
 
   // Geometric traversability
-  float geometric_traversability = w_r * (1.0f - roughness) + w_s * (1.0f - normalized_angle_score);
+  float geometric_traversability = w_r * (1.0f - roughness) + w_s * (1.0f - slope_angle);
   geometric_traversability = std::clamp(geometric_traversability, 0.0f, 1.0f);
   map_.at("traversability", index) = geometric_traversability;
   float inverse_traversability = 1.0f - geometric_traversability;
