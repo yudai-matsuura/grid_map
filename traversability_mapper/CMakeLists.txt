@@ -11,7 +11,8 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
 find_package(grid_map_core REQUIRED)
-find_package(traversability_msgs REQUIRED)
+# find_package(traversability_msgs REQUIRED)
+find_package(lbr_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
@@ -29,7 +30,8 @@ ament_target_dependencies(
   sensor_msgs
   tf2_ros
   tf2_geometry_msgs
-  traversability_msgs)
+  # traversability_msgs
+  lbr_msgs)
 
 install(TARGETS
   traversability_publisher_ros2

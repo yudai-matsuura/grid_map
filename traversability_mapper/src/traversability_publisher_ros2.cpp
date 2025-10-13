@@ -20,10 +20,13 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   grid_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("/grid_map", 10);
 
   // Subscriber
-  classified_region_sub_ = this->create_subscription<traversability_msgs::msg::ClassifiedRegion>(
-    "/classified_region", 10, std::bind(&TraversabilityPublisher::classifiedRegionCallback, this, std::placeholders::_1));
+  // classified_region_sub_ = this->create_subscription<traversability_msgs::msg::ClassifiedRegion>(
+  //   "/classified_region", 10, std::bind(&TraversabilityPublisher::classifiedRegionCallback, this, std::placeholders::_1));
 
-  grid_cell_array_sub_ = this->create_subscription<traversability_msgs::msg::GridCellArray>(
+  // grid_cell_array_sub_ = this->create_subscription<traversability_msgs::msg::GridCellArray>(
+  //   "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
+
+  grid_cell_array_sub_ = this->create_subscription<lbr_msgs::msg::GridCellArray>(
     "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
 
   // TF
@@ -52,7 +55,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 }
 
 void TraversabilityPublisher::gridCellArrayCallback(
-  const traversability_msgs::msg::GridCellArray::SharedPtr msg)
+  const lbr_msgs::msg::GridCellArray::SharedPtr msg)
 {
   map_.setTimestamp(this->get_clock()->now().nanoseconds());
 
@@ -118,77 +121,77 @@ for (const auto &cell : msg->cells) {
 }
 
 
-void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg)
-{
-  map_.setTimestamp(this->get_clock()->now().nanoseconds());
-  float traversability_value = 0.0;
-  float packed_color = 0.0;
-  float suitability = msg->wheel_suitability;
-  float normalized_suitability = suitability / 100;
-  normalized_suitability = std::max(0.0f, std::min(1.0f, normalized_suitability));
-  traversability_value = normalized_suitability;
+// void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg)
+// {
+//   map_.setTimestamp(this->get_clock()->now().nanoseconds());
+//   float traversability_value = 0.0;
+//   float packed_color = 0.0;
+//   float suitability = msg->wheel_suitability;
+//   float normalized_suitability = suitability / 100;
+//   normalized_suitability = std::max(0.0f, std::min(1.0f, normalized_suitability));
+//   traversability_value = normalized_suitability;
 
-  // Clamp value to kSuitabilityMin ~ kSuitabilityMax for fuzzy
-  const float kSuitabilityMin = 25.0f;
-  const float kSuitabilityMax = 75.0f;
-  float clamped_suitability = std::max(kSuitabilityMin, std::min(suitability, kSuitabilityMax));
-  float renormalized_for_color = (clamped_suitability - kSuitabilityMin) / (kSuitabilityMax - kSuitabilityMin);
+//   // Clamp value to kSuitabilityMin ~ kSuitabilityMax for fuzzy
+//   const float kSuitabilityMin = 25.0f;
+//   const float kSuitabilityMax = 75.0f;
+//   float clamped_suitability = std::max(kSuitabilityMin, std::min(suitability, kSuitabilityMax));
+//   float renormalized_for_color = (clamped_suitability - kSuitabilityMin) / (kSuitabilityMax - kSuitabilityMin);
 
-  // Map color
-  Eigen::Vector3f rgb = getGradationColor(1.0f - renormalized_for_color);
-  grid_map::colorVectorToValue(rgb, packed_color);
+//   // Map color
+//   Eigen::Vector3f rgb = getGradationColor(1.0f - renormalized_for_color);
+//   grid_map::colorVectorToValue(rgb, packed_color);
 
-  // Get the robot's current position
-  std::string source_frame = "base_link";
-  std::string target_frame = map_.getFrameId(); // odom frame
-  auto robot_tf = lookupTransform(target_frame, source_frame);
-  // Move the center of the map to the robot's current position.
-  if (robot_tf) {
-    grid_map::Position robot_position(robot_tf->transform.translation.x, robot_tf->transform.translation.y);
-    map_.move(robot_position);
-  }
+//   // Get the robot's current position
+//   std::string source_frame = "base_link";
+//   std::string target_frame = map_.getFrameId(); // odom frame
+//   auto robot_tf = lookupTransform(target_frame, source_frame);
+//   // Move the center of the map to the robot's current position.
+//   if (robot_tf) {
+//     grid_map::Position robot_position(robot_tf->transform.translation.x, robot_tf->transform.translation.y);
+//     map_.move(robot_position);
+//   }
 
-  // Transform point cloud to odom frame
-  const sensor_msgs::msg::PointCloud2 & pointcloud = msg->region_pointcloud;
-  auto transform_stamped_opt = lookupTransform(map_.getFrameId(), pointcloud.header.frame_id);
-  if (!transform_stamped_opt) {
-    RCLCPP_WARN(this->get_logger(), "Could not get transform from %s to %s",
-                pointcloud.header.frame_id.c_str(), map_.getFrameId().c_str());
-    return;
-  }
-  auto transform_stamped = *transform_stamped_opt;
+//   // Transform point cloud to odom frame
+//   const sensor_msgs::msg::PointCloud2 & pointcloud = msg->region_pointcloud;
+//   auto transform_stamped_opt = lookupTransform(map_.getFrameId(), pointcloud.header.frame_id);
+//   if (!transform_stamped_opt) {
+//     RCLCPP_WARN(this->get_logger(), "Could not get transform from %s to %s",
+//                 pointcloud.header.frame_id.c_str(), map_.getFrameId().c_str());
+//     return;
+//   }
+//   auto transform_stamped = *transform_stamped_opt;
 
-  // Process each point in the point cloud
-for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_y(pointcloud, "y"), iter_z(pointcloud, "z");
-      iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z)
-  {
-      // Prepare points in the source frame (from point cloud header)
-      geometry_msgs::msg::PointStamped point_in_source_frame;
-      point_in_source_frame.header.frame_id = pointcloud.header.frame_id;
-      point_in_source_frame.header.stamp = pointcloud.header.stamp;
-      point_in_source_frame.point.x = *iter_x;
-      point_in_source_frame.point.y = *iter_y;
-      point_in_source_frame.point.z = *iter_z;
+//   // Process each point in the point cloud
+// for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_y(pointcloud, "y"), iter_z(pointcloud, "z");
+//       iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z)
+//   {
+//       // Prepare points in the source frame (from point cloud header)
+//       geometry_msgs::msg::PointStamped point_in_source_frame;
+//       point_in_source_frame.header.frame_id = pointcloud.header.frame_id;
+//       point_in_source_frame.header.stamp = pointcloud.header.stamp;
+//       point_in_source_frame.point.x = *iter_x;
+//       point_in_source_frame.point.y = *iter_y;
+//       point_in_source_frame.point.z = *iter_z;
 
-      // Transform points to the odom coordinate
-      auto transformed_point_opt = transformPoint(point_in_source_frame, transform_stamped);
-      if (!transformed_point_opt) {
-          RCLCPP_WARN(this->get_logger(), "Could not transform point");
-          continue;
-      }
+//       // Transform points to the odom coordinate
+//       auto transformed_point_opt = transformPoint(point_in_source_frame, transform_stamped);
+//       if (!transformed_point_opt) {
+//           RCLCPP_WARN(this->get_logger(), "Could not transform point");
+//           continue;
+//       }
 
-      grid_map::Position point_position(transformed_point_opt->point.x, transformed_point_opt->point.y);
-      grid_map::Index index;
-      if (map_.getIndex(point_position, index)) {
-          // Write score and color information to cells
-          map_.at("traversability", index) = traversability_value;
-          map_.at("traversability_color", index) = packed_color;
-      }
-  }
-  // Publish grid map
-  auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
-  grid_map_pub_->publish(std::move(output_msg));
-}
+//       grid_map::Position point_position(transformed_point_opt->point.x, transformed_point_opt->point.y);
+//       grid_map::Index index;
+//       if (map_.getIndex(point_position, index)) {
+//           // Write score and color information to cells
+//           map_.at("traversability", index) = traversability_value;
+//           map_.at("traversability_color", index) = packed_color;
+//       }
+//   }
+//   // Publish grid map
+//   auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
+//   grid_map_pub_->publish(std::move(output_msg));
+// }
 
 Eigen::Vector3f TraversabilityPublisher::getGradationColor(float value) {
   Eigen::Vector3f rgb(0.0f, 0.0f, 0.0f);
