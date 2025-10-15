@@ -61,7 +61,7 @@ void TraversabilityPublisher::gridCellArrayCallback(
 
   // move map by robot position
 std::string source_frame = "base_link";
-std::string target_frame = map_.getFrameId();  // 通常 "odom"
+std::string target_frame = map_.getFrameId();  // odom
 auto tf_opt = lookupTransform(target_frame, source_frame);
 if (!tf_opt) {
   RCLCPP_WARN(this->get_logger(), "TF not available between %s and %s",
@@ -69,6 +69,11 @@ if (!tf_opt) {
   return;
 }
 auto transform_stamped = *tf_opt;
+// move map center to robot position
+grid_map::Position robot_pos(transform_stamped.transform.translation.x,
+  transform_stamped.transform.translation.y);
+map_.move(robot_pos);
+
 
 float w_r = 0.5;
 float w_s = 0.5;
@@ -105,7 +110,7 @@ for (const auto &cell : msg->cells) {
   map_.at("slope_color", index) = packed_color_s;
 
   // Geometric traversability
-  float geometric_traversability = w_r * (1.0f - roughness) + w_s * (1.0f - slope_angle);
+  float geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle);
   geometric_traversability = std::clamp(geometric_traversability, 0.0f, 1.0f);
   map_.at("traversability", index) = geometric_traversability;
   float inverse_traversability = 1.0f - geometric_traversability;

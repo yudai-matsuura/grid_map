@@ -94,12 +94,12 @@ def generate_launch_description():
         ),
 
         Node(
-            package='imu_filter_madgwick', 
-            executable='imu_filter_madgwick_node', 
+            package='imu_filter_madgwick',
+            executable='imu_filter_madgwick_node',
             name='imu_filter',
             output='screen',
-            parameters=[{'use_mag': False, 
-                         'world_frame':'enu', 
+            parameters=[{'use_mag': False,
+                         'world_frame':'enu',
                          'publish_tf':False,
                          'use_sim_time': use_sim_time}],
             remappings=imu_filter_remappings
