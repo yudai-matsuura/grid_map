@@ -59,7 +59,7 @@ def generate_launch_description():
                     plugin='rtabmap_sync::RGBDSync',
                     name='rgbd_sync',
                     parameters=[{
-                        'approx_sync': True, 
+                        'approx_sync': True,
                         'use_sim_time': use_sim_time,
                         'approx_sync_max_interval': 0.7
                     }],

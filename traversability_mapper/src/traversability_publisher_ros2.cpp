@@ -41,7 +41,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 
   // Initialize grid map
   map_.setFrameId("odom");
-  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.3, grid_map::Position(0.0, 0.0));
+  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.45, grid_map::Position(0.0, 0.0));
   map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
   map_.add("slope_angle", 0.0);
@@ -73,7 +73,6 @@ auto transform_stamped = *tf_opt;
 grid_map::Position robot_pos(transform_stamped.transform.translation.x,
   transform_stamped.transform.translation.y);
 map_.move(robot_pos);
-
 
 float w_r = 0.5;
 float w_s = 0.5;
@@ -206,7 +205,7 @@ Eigen::Vector3f TraversabilityPublisher::getGradationColor(float value) {
     rgb.y() = 1.0f;
     rgb.z() = 0.0f;
   } else {
-    float t = (value - 0.5f) / 0.5f; 
+    float t = (value - 0.5f) / 0.5f;
     rgb.x() = 1.0f;
     rgb.y() = 1.0f - t;
     rgb.z() = 0.0f;

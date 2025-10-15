@@ -18,21 +18,23 @@ def generate_launch_description():
 
     rtabmap_params = {
         'frame_id': 'base_link',
-        'subscribe_depth': False,
-        'subscribe_rgb': False,
+        'subscribe_depth': True,
+        'subscribe_rgb': True,
         'subscribe_rgbd': True,
         'subscribe_odom_info': True,
         'subscribe_imu': True,
         'approx_sync': True,
         'wait_imu_to_init': True,
         'queue_size': 10,
-        'Vis/MinInliers': '5',
+        'Vis/MinInliers': '10',
         'Odom/Strategy': '1',
-        'Odom/ResetCountdown': '1',
+        'Odom/ResetCountdown': '0',
         'OdomF2M/MaxSize': '2000',
-        'Odom/ScanMatching/Enabled': 'true',
-        'Odom/ScanMatching/MaxCorrespondenceDistance': '0.1',
-        'Reg/Force3DoF': 'false'
+        'Odom/ScanMatching/Enabled': 'false',
+        'Odom/ScanMatching/MaxCorrespondenceDistance': '0.2',
+        'Reg/Force3DoF': 'false',
+        'wait_for_transform': 0.2,
+        'Odom/ExpectedUpdateRate': '1'
     }
 
     odom_remappings = [
@@ -99,8 +101,8 @@ def generate_launch_description():
             name='imu_filter',
             output='screen',
             parameters=[{'use_mag': False,
-                         'world_frame':'enu',
-                         'publish_tf':False,
+                         'world_frame': 'enu',
+                         'publish_tf': False,
                          'use_sim_time': use_sim_time}],
             remappings=imu_filter_remappings
         ),
