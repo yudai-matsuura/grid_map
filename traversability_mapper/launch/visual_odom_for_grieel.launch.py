@@ -6,6 +6,7 @@ from launch_ros.descriptions import ComposableNode
 from ament_index_python.packages import get_package_share_directory
 import os
 
+
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
 
@@ -21,9 +22,9 @@ def generate_launch_description():
         'subscribe_rgb': False,
         'subscribe_rgbd': True,
         'subscribe_odom_info': True,
-        'subscribe_imu': False,
+        'subscribe_imu': True,
         'approx_sync': True,
-        'wait_imu_to_init': False,
+        'wait_imu_to_init': True,
         'queue_size': 10,
         'Vis/MinInliers': '5',
         'Odom/Strategy': '1',
@@ -35,11 +36,11 @@ def generate_launch_description():
     }
 
     odom_remappings = [
-        ('rgbd_image', '/rgbd_image')]
+        ('rgbd_image', '/rgbd_image'),
+        ('imu', '/imu/data_raw')]
 
     traversability_remappings = [
         ('/classified_region', '/classified_region')]
-
 
     return LaunchDescription([
         DeclareLaunchArgument(

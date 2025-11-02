@@ -41,12 +41,14 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 
   // Initialize grid map
   map_.setFrameId("odom");
-  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.45, grid_map::Position(0.0, 0.0));
+  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.5, grid_map::Position(0.0, 0.0));
   map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
   map_.add("slope_angle", 0.0);
+  map_.add("frequency", 0.0);
   map_.add("roughness_color", 0.0);
   map_.add("slope_color", 0.0);
+  map_.add("frequency_color", 0.0);
   map_.add("traversability_color", 0.0);
   map_.setBasicLayers({"traversability", "traversability_color"});
 
@@ -107,6 +109,14 @@ for (const auto &cell : msg->cells) {
   float packed_color_s;
   grid_map::colorVectorToValue(rgb_s, packed_color_s);
   map_.at("slope_color", index) = packed_color_s;
+
+  // frequency
+  float frequency = cell.frequency;
+  map_.at("frequency", index) = frequency;
+  Eigen::Vector3f rgb_f = getGradationColor(frequency);
+  float packed_color_f;
+  grid_map::colorVectorToValue(rgb_f, packed_color_f);
+  map_.at("frequency_color", index) = packed_color_f;
 
   // Geometric traversability
   float geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle);
