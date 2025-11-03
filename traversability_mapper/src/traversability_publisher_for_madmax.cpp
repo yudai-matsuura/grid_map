@@ -20,11 +20,6 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   grid_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("/grid_map", 10);
 
   // Subscriber
-  // classified_region_sub_ = this->create_subscription<traversability_msgs::msg::ClassifiedRegion>(
-  //   "/classified_region", 10, std::bind(&TraversabilityPublisher::classifiedRegionCallback, this, std::placeholders::_1));
-
-  // grid_cell_array_sub_ = this->create_subscription<traversability_msgs::msg::GridCellArray>(
-  //   "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
 
   grid_cell_array_sub_ = this->create_subscription<lbr_msgs::msg::GridCellArray>(
     "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
@@ -40,8 +35,8 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
       std::bind(&TraversabilityPublisher::projection_timer_callback, this));
 
   // Initialize grid map
-  map_.setFrameId("odom");
-  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.5, grid_map::Position(0.0, 0.0));
+  map_.setFrameId("nav_current_submap");
+  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.7, grid_map::Position(0.0, 0.0));
   map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
   map_.add("slope_angle", 0.0);
@@ -62,8 +57,8 @@ void TraversabilityPublisher::gridCellArrayCallback(
   map_.setTimestamp(this->get_clock()->now().nanoseconds());
 
   // move map by robot position
-  std::string source_frame = "base_link";
-  std::string target_frame = map_.getFrameId();  // odom
+  std::string source_frame = "tcp_base";
+  std::string target_frame = map_.getFrameId();  // nav_current_submap
   auto tf_opt = lookupTransform(target_frame, source_frame);
   if (!tf_opt) {
     RCLCPP_WARN(this->get_logger(), "TF not available between %s and %s",
@@ -80,7 +75,7 @@ void TraversabilityPublisher::gridCellArrayCallback(
   float w_s = 0.5;
 
   for (const auto &cell : msg->cells) {
-    // base_link → odom
+    // tcp_base → nav_current_submap
     geometry_msgs::msg::PointStamped point_in, point_out;
     point_in.header.frame_id = source_frame;
     point_in.point.x = cell.position.x;
@@ -182,16 +177,16 @@ void TraversabilityPublisher::projection_timer_callback()
   geometry_msgs::msg::TransformStamped t;
   try {
       // Get base_link pose
-      t = tf_buffer_->lookupTransform("odom", "base_link", tf2::TimePointZero);
+      t = tf_buffer_->lookupTransform("nav_current_submap", "tcp_base", tf2::TimePointZero);
   } catch (const tf2::TransformException & ex) {
-      RCLCPP_WARN(this->get_logger(), "Could not get 'base_link' transform: %s", ex.what());
+      RCLCPP_WARN(this->get_logger(), "Could not get 'nav_current_submap' transform: %s", ex.what());
       return;
   }
 
   // Make new frame
   geometry_msgs::msg::TransformStamped t_2d;
   t_2d.header.stamp = this->get_clock()->now();
-  t_2d.header.frame_id = "odom";
+  t_2d.header.frame_id = "nav_current_submap";
   t_2d.child_frame_id = "base_link_2d";
 
   // z = 0
@@ -216,79 +211,6 @@ void TraversabilityPublisher::projection_timer_callback()
 
   tf_broadcaster_->sendTransform(t_2d);
 }
-
-// void TraversabilityPublisher::classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg)
-// {
-//   map_.setTimestamp(this->get_clock()->now().nanoseconds());
-//   float traversability_value = 0.0;
-//   float packed_color = 0.0;
-//   float suitability = msg->wheel_suitability;
-//   float normalized_suitability = suitability / 100;
-//   normalized_suitability = std::max(0.0f, std::min(1.0f, normalized_suitability));
-//   traversability_value = normalized_suitability;
-
-//   // Clamp value to kSuitabilityMin ~ kSuitabilityMax for fuzzy
-//   const float kSuitabilityMin = 25.0f;
-//   const float kSuitabilityMax = 75.0f;
-//   float clamped_suitability = std::max(kSuitabilityMin, std::min(suitability, kSuitabilityMax));
-//   float renormalized_for_color = (clamped_suitability - kSuitabilityMin) / (kSuitabilityMax - kSuitabilityMin);
-
-//   // Map color
-//   Eigen::Vector3f rgb = getGradationColor(1.0f - renormalized_for_color);
-//   grid_map::colorVectorToValue(rgb, packed_color);
-
-//   // Get the robot's current position
-//   std::string source_frame = "base_link";
-//   std::string target_frame = map_.getFrameId(); // odom frame
-//   auto robot_tf = lookupTransform(target_frame, source_frame);
-//   // Move the center of the map to the robot's current position.
-//   if (robot_tf) {
-//     grid_map::Position robot_position(robot_tf->transform.translation.x, robot_tf->transform.translation.y);
-//     map_.move(robot_position);
-//   }
-
-//   // Transform point cloud to odom frame
-//   const sensor_msgs::msg::PointCloud2 & pointcloud = msg->region_pointcloud;
-//   auto transform_stamped_opt = lookupTransform(map_.getFrameId(), pointcloud.header.frame_id);
-//   if (!transform_stamped_opt) {
-//     RCLCPP_WARN(this->get_logger(), "Could not get transform from %s to %s",
-//                 pointcloud.header.frame_id.c_str(), map_.getFrameId().c_str());
-//     return;
-//   }
-//   auto transform_stamped = *transform_stamped_opt;
-
-//   // Process each point in the point cloud
-// for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"), iter_y(pointcloud, "y"), iter_z(pointcloud, "z");
-//       iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z)
-//   {
-//       // Prepare points in the source frame (from point cloud header)
-//       geometry_msgs::msg::PointStamped point_in_source_frame;
-//       point_in_source_frame.header.frame_id = pointcloud.header.frame_id;
-//       point_in_source_frame.header.stamp = pointcloud.header.stamp;
-//       point_in_source_frame.point.x = *iter_x;
-//       point_in_source_frame.point.y = *iter_y;
-//       point_in_source_frame.point.z = *iter_z;
-
-//       // Transform points to the odom coordinate
-//       auto transformed_point_opt = transformPoint(point_in_source_frame, transform_stamped);
-//       if (!transformed_point_opt) {
-//           RCLCPP_WARN(this->get_logger(), "Could not transform point");
-//           continue;
-//       }
-
-//       grid_map::Position point_position(transformed_point_opt->point.x, transformed_point_opt->point.y);
-//       grid_map::Index index;
-//       if (map_.getIndex(point_position, index)) {
-//           // Write score and color information to cells
-//           map_.at("traversability", index) = traversability_value;
-//           map_.at("traversability_color", index) = packed_color;
-//       }
-//   }
-//   // Publish grid map
-//   auto output_msg = grid_map::GridMapRosConverter::toMessage(map_);
-//   grid_map_pub_->publish(std::move(output_msg));
-// }
-
 
 int main(int argc, char * argv[])
 {

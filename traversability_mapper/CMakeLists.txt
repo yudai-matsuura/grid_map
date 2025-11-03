@@ -16,6 +16,7 @@ find_package(lbr_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
+# traversability_publisher_ros2
 add_executable(traversability_publisher_ros2 src/traversability_publisher_ros2.cpp)
 
 target_include_directories(traversability_publisher_ros2 PUBLIC
@@ -23,9 +24,9 @@ target_include_directories(traversability_publisher_ros2 PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 ament_target_dependencies(
-  traversability_publisher_ros2 
-  rclcpp 
-  grid_map_ros 
+  traversability_publisher_ros2
+  rclcpp
+  grid_map_ros
   grid_map_core
   sensor_msgs
   tf2_ros
@@ -33,8 +34,27 @@ ament_target_dependencies(
   # traversability_msgs
   lbr_msgs)
 
+  # traversability_publisher_for_MADMAX
+add_executable(traversability_publisher_for_madmax src/traversability_publisher_for_madmax.cpp)
+
+target_include_directories(traversability_publisher_for_madmax PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(
+  traversability_publisher_for_madmax
+  rclcpp
+  grid_map_ros
+  grid_map_core
+  sensor_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  lbr_msgs
+)
+
 install(TARGETS
   traversability_publisher_ros2
+  traversability_publisher_for_madmax
   DESTINATION lib/${PROJECT_NAME})
 
 install(
