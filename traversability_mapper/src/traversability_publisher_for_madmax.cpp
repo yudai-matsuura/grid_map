@@ -35,7 +35,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
       std::bind(&TraversabilityPublisher::projection_timer_callback, this));
 
   // Initialize grid map
-  map_.setFrameId("nav_current_submap");
+  map_.setFrameId("nav");
   map_.setGeometry(grid_map::Length(10.0, 10.0), 0.7, grid_map::Position(0.0, 0.0));
   map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
@@ -58,7 +58,7 @@ void TraversabilityPublisher::gridCellArrayCallback(
 
   // move map by robot position
   std::string source_frame = "tcp_base";
-  std::string target_frame = map_.getFrameId();  // nav_current_submap
+  std::string target_frame = map_.getFrameId();  // nav
   auto tf_opt = lookupTransform(target_frame, source_frame);
   if (!tf_opt) {
     RCLCPP_WARN(this->get_logger(), "TF not available between %s and %s",
@@ -71,11 +71,12 @@ void TraversabilityPublisher::gridCellArrayCallback(
     transform_stamped.transform.translation.y);
   map_.move(robot_pos);
 
-  float w_r = 0.5;
-  float w_s = 0.5;
+  float w_r = 0.4;
+  float w_s = 0.4;
+  float w_f = 0.2;
 
   for (const auto &cell : msg->cells) {
-    // tcp_base → nav_current_submap
+    // tcp_base → nav
     geometry_msgs::msg::PointStamped point_in, point_out;
     point_in.header.frame_id = source_frame;
     point_in.point.x = cell.position.x;
@@ -114,7 +115,7 @@ void TraversabilityPublisher::gridCellArrayCallback(
     map_.at("frequency_color", index) = packed_color_f;
 
     // Geometric traversability
-    float geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle);
+    float geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle + w_f * frequency);
     geometric_traversability = std::clamp(geometric_traversability, 0.0f, 1.0f);
     map_.at("traversability", index) = geometric_traversability;
     float inverse_traversability = 1.0f - geometric_traversability;
@@ -129,7 +130,8 @@ void TraversabilityPublisher::gridCellArrayCallback(
   grid_map_pub_->publish(std::move(output_msg));
 }
 
-Eigen::Vector3f TraversabilityPublisher::getGradationColor(float value) {
+Eigen::Vector3f TraversabilityPublisher::getGradationColor(float value)
+{
   Eigen::Vector3f rgb(0.0f, 0.0f, 0.0f);
   if (value < 0.5f) {
     float t = value / 0.5f;
@@ -177,16 +179,16 @@ void TraversabilityPublisher::projection_timer_callback()
   geometry_msgs::msg::TransformStamped t;
   try {
       // Get base_link pose
-      t = tf_buffer_->lookupTransform("nav_current_submap", "tcp_base", tf2::TimePointZero);
+      t = tf_buffer_->lookupTransform("nav", "tcp_base", tf2::TimePointZero);
   } catch (const tf2::TransformException & ex) {
-      RCLCPP_WARN(this->get_logger(), "Could not get 'nav_current_submap' transform: %s", ex.what());
+      RCLCPP_WARN(this->get_logger(), "Could not get 'nav' transform: %s", ex.what());
       return;
   }
 
   // Make new frame
   geometry_msgs::msg::TransformStamped t_2d;
   t_2d.header.stamp = this->get_clock()->now();
-  t_2d.header.frame_id = "nav_current_submap";
+  t_2d.header.frame_id = "nav";
   t_2d.child_frame_id = "base_link_2d";
 
   // z = 0

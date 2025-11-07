@@ -37,6 +37,16 @@ ament_target_dependencies(
   # traversability_publisher_for_MADMAX
 add_executable(traversability_publisher_for_madmax src/traversability_publisher_for_madmax.cpp)
 
+add_executable(fix_camera_frame src/fix_camera_frame.cpp)
+ament_target_dependencies(fix_camera_frame
+  rclcpp
+  sensor_msgs
+)
+
+install(TARGETS
+  fix_camera_frame
+  DESTINATION lib/${PROJECT_NAME})
+
 target_include_directories(traversability_publisher_for_madmax PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>

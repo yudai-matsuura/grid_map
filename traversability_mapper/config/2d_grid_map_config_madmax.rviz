@@ -55,7 +55,7 @@ Visualization Manager:
       Autocompute Intensity Bounds: true
       Class: grid_map_rviz_plugin/GridMap
       Color: 200; 200; 200
-      Color Layer: roughness_color
+      Color Layer: traversability_color
       Color Transformer: ColorLayer
       Enabled: true
       Height Layer: elevation
@@ -85,29 +85,29 @@ Visualization Manager:
         base_link_2d:
           Value: true
         camera_color:
-          Value: true
+          Value: false
         camera_left:
-          Value: true
+          Value: false
         camera_left0:
-          Value: true
+          Value: false
         imu:
-          Value: true
+          Value: false
         imu0:
-          Value: true
+          Value: false
         nav:
           Value: true
         nav_current_submap:
-          Value: true
+          Value: false
         rover_base:
-          Value: true
+          Value: false
         sherpaTT_body:
-          Value: true
+          Value: false
         tcp:
-          Value: true
+          Value: false
         tcp_base:
-          Value: true
+          Value: false
         velodyne:
-          Value: true
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
@@ -115,9 +115,9 @@ Visualization Manager:
       Show Names: false
       Tree:
         nav:
+          base_link_2d:
+            {}
           nav_current_submap:
-            base_link_2d:
-              {}
             imu:
               rover_base:
                 {}
@@ -150,7 +150,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
-    Fixed Frame: nav_current_submap
+    Fixed Frame: nav
     Frame Rate: 30
   Name: root
   Tools:
@@ -193,25 +193,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 7.418034553527832
+      Distance: 14.485053062438965
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.7876219749450684
-        Y: -0.520833432674408
-        Z: 0.785781741142273
+        X: 2.6648271083831787
+        Y: -1.6726971864700317
+        Z: 2.3249197006225586
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1697967052459717
+      Pitch: 1.4697964191436768
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.1103954315185547
+      Yaw: 3.168576240539551
     Saved: ~
 Window Geometry:
   Displays:
@@ -231,5 +231,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1920
-  X: 0
+  X: 1920
   Y: 0
