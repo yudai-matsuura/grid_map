@@ -26,11 +26,11 @@ def generate_launch_description():
                 'Vis/MaxFeatures': '1500',
                 'Optimizer/Strategy': '1',
                 'Grid/FromDepth': True,
-                'Grid/RangeMax': '10.0',
-                'qos_odom': 2,          # 0=Default, 1=Reliable, 2=Best Effort
-                'qos_image': 2,         # 2=Best Effort
-                'qos_depth': 2,         # 2=Best Effort
-                'qos_camera_info': 2,   # 2=Best Effort
+                'Grid/RangeMax': '5.0',
+                'qos_odom': 2,
+                'qos_image': 2,
+                'qos_depth': 2,
+                'qos_camera_info': 2,
             }],
             remappings=[
                 ('/odom', '/nav_current_submap'),
@@ -52,5 +52,12 @@ def generate_launch_description():
                 ('rgb/camera_info', '/fixed/left/camera_info'),
                 ('odom', 'nav')
             ],
+        ),
+
+        Node(
+            package='traversability_mapper',
+            executable='fix_camera_frame',
+            name='fix_camera_frame',
+            output='screen'
         )
     ])
