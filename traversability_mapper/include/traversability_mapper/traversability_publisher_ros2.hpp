@@ -29,6 +29,8 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 // #include "traversability_msgs/msg/classified_region.hpp"
 // #include "traversability_msgs/msg/grid_cell_data.hpp"
@@ -64,10 +66,15 @@ private:
     const geometry_msgs::msg::PointStamped & point_in,
     const geometry_msgs::msg::TransformStamped & transform);
 
+  // Publish robot path
+  void updateAndPublishPath(geometry_msgs::msg::TransformStamped & t_2d);
+
 
 
   // Publisher
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
+
   // Subscriber
   // rclcpp::Subscription<traversability_msgs::msg::ClassifiedRegion>::SharedPtr classified_region_sub_;
   rclcpp::Subscription<lbr_msgs::msg::GridCellArray>::SharedPtr grid_cell_array_sub_;
@@ -79,6 +86,7 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   rclcpp::TimerBase::SharedPtr projection_timer_;
+  nav_msgs::msg::Path path_msg_;
 };
 
 

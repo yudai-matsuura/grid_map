@@ -1,26 +1,12 @@
-// Copyright (c) 2025 Tohoku Univ. Space Robotics Lab.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include "traversability_mapper/traversability_publisher_ros2.hpp"
 
 TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publisher_ros2")
 {
   // Publisher
   grid_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("/grid_map", 10);
+  path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/robot_path", 10);
 
   // Subscriber
-
   grid_cell_array_sub_ = this->create_subscription<lbr_msgs::msg::GridCellArray>(
     "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
 
@@ -34,16 +20,16 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
       std::chrono::milliseconds(50),
       std::bind(&TraversabilityPublisher::projection_timer_callback, this));
 
+  path_msg_.header.frame_id = "nav";
+
   // Initialize grid map
   map_.setFrameId("nav");
   map_.setGeometry(grid_map::Length(10.0, 10.0), 0.7, grid_map::Position(0.0, 0.0));
-  map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
   map_.add("slope_angle", 0.0);
-  map_.add("frequency", 0.0);
+  map_.add("traversability", 0.0);
   map_.add("roughness_color", 0.0);
   map_.add("slope_color", 0.0);
-  map_.add("frequency_color", 0.0);
   map_.add("traversability_color", 0.0);
   map_.setBasicLayers({"traversability", "traversability_color"});
 
@@ -70,10 +56,9 @@ void TraversabilityPublisher::gridCellArrayCallback(
   grid_map::Position robot_pos(transform_stamped.transform.translation.x,
     transform_stamped.transform.translation.y);
   map_.move(robot_pos);
-
-  float w_r = 0.4;
-  float w_s = 0.4;
-  float w_f = 0.2;
+  // Wight
+  float w_r = 0.5;
+  float w_s = 0.5;
 
   for (const auto &cell : msg->cells) {
     // tcp_base → nav
@@ -106,16 +91,8 @@ void TraversabilityPublisher::gridCellArrayCallback(
     grid_map::colorVectorToValue(rgb_s, packed_color_s);
     map_.at("slope_color", index) = packed_color_s;
 
-    // frequency
-    float frequency = cell.frequency;
-    map_.at("frequency", index) = frequency;
-    Eigen::Vector3f rgb_f = getGradationColor(frequency);
-    float packed_color_f;
-    grid_map::colorVectorToValue(rgb_f, packed_color_f);
-    map_.at("frequency_color", index) = packed_color_f;
-
     // Geometric traversability
-    float geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle + w_f * frequency);
+    float geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle);
     geometric_traversability = std::clamp(geometric_traversability, 0.0f, 1.0f);
     map_.at("traversability", index) = geometric_traversability;
     float inverse_traversability = 1.0f - geometric_traversability;
@@ -184,34 +161,48 @@ void TraversabilityPublisher::projection_timer_callback()
       RCLCPP_WARN(this->get_logger(), "Could not get 'nav' transform: %s", ex.what());
       return;
   }
-
-  // Make new frame
+  // Convert to 2D and broadcast
   geometry_msgs::msg::TransformStamped t_2d;
   t_2d.header.stamp = this->get_clock()->now();
   t_2d.header.frame_id = "nav";
   t_2d.child_frame_id = "base_link_2d";
-
-  // z = 0
   t_2d.transform.translation.x = t.transform.translation.x;
   t_2d.transform.translation.y = t.transform.translation.y;
   t_2d.transform.translation.z = 0.0;
-
   // Get RPY from quaternion
   tf2::Quaternion q(t.transform.rotation.x, t.transform.rotation.y, t.transform.rotation.z, t.transform.rotation.w);
   tf2::Matrix3x3 m(q);
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
-
-  // Make new Quaternion by yaw only
   tf2::Quaternion q_2d;
-  q_2d.setRPY(0, 0, yaw); // roll = 0 , pitch = 0
-
+  q_2d.setRPY(0, 0, yaw); // yaw only
   t_2d.transform.rotation.x = q_2d.x();
   t_2d.transform.rotation.y = q_2d.y();
   t_2d.transform.rotation.z = q_2d.z();
   t_2d.transform.rotation.w = q_2d.w();
 
   tf_broadcaster_->sendTransform(t_2d);
+  // Robot path
+  updateAndPublishPath(t_2d);
+}
+
+void TraversabilityPublisher::updateAndPublishPath(geometry_msgs::msg::TransformStamped & t_2d)
+{
+  geometry_msgs::msg::PoseStamped pose;
+  pose.header = t_2d.header;
+  pose.pose.position.x = t_2d.transform.translation.x;
+  pose.pose.position.y = t_2d.transform.translation.y;
+  pose.pose.position.z = 0.0;
+  pose.pose.orientation = t_2d.transform.rotation;
+  path_msg_.header.stamp = this->get_clock()->now();
+  path_msg_.poses.push_back(pose);
+  // Limit number of stored poses
+  const size_t max_points = 1000;
+  if (path_msg_.poses.size() > max_points) {
+    path_msg_.poses.erase(path_msg_.poses.begin());
+  }
+  // Publish path
+  path_pub_->publish(path_msg_);
 }
 
 int main(int argc, char * argv[])

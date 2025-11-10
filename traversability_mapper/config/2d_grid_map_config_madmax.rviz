@@ -7,9 +7,9 @@ Panels:
         - /Global Options1
         - /Status1
         - /GridMap1
-        - /TF1
         - /TF1/Frames1
         - /Image1
+        - /Path1
       Splitter Ratio: 0.5
     Tree Height: 239
   - Class: rviz_common/Selection
@@ -147,6 +147,34 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /hcru2/pt_color_rect/left/image
       Value: true
+    - Alpha: 1
+      Buffer Length: 20
+      Class: rviz_default_plugins/Path
+      Color: 0; 118; 201
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Billboards
+      Line Width: 0.05000000074505806
+      Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_path
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -193,25 +221,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 14.485053062438965
+      Distance: 16.895992279052734
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.6648271083831787
-        Y: -1.6726971864700317
-        Z: 2.3249197006225586
+        X: 24.20498275756836
+        Y: -10.00229263305664
+        Z: 1.4139834642410278
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4697964191436768
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.168576240539551
+      Yaw: 3.113586187362671
     Saved: ~
 Window Geometry:
   Displays:

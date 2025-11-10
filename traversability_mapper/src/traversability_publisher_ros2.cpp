@@ -45,10 +45,8 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   map_.add("traversability", 0.0);
   map_.add("roughness", 0.0);
   map_.add("slope_angle", 0.0);
-  map_.add("frequency", 0.0);
   map_.add("roughness_color", 0.0);
   map_.add("slope_color", 0.0);
-  map_.add("frequency_color", 0.0);
   map_.add("traversability_color", 0.0);
   map_.setBasicLayers({"traversability", "traversability_color"});
 
@@ -109,14 +107,6 @@ void TraversabilityPublisher::gridCellArrayCallback(
     float packed_color_s;
     grid_map::colorVectorToValue(rgb_s, packed_color_s);
     map_.at("slope_color", index) = packed_color_s;
-
-    // frequency
-    float frequency = cell.frequency;
-    map_.at("frequency", index) = frequency;
-    Eigen::Vector3f rgb_f = getGradationColor(frequency);
-    float packed_color_f;
-    grid_map::colorVectorToValue(rgb_f, packed_color_f);
-    map_.at("frequency_color", index) = packed_color_f;
 
     // Geometric traversability
     float geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle);
