@@ -194,6 +194,18 @@ void TraversabilityPublisher::updateAndPublishPath(geometry_msgs::msg::Transform
   pose.pose.position.y = t_2d.transform.translation.y;
   pose.pose.position.z = 0.0;
   pose.pose.orientation = t_2d.transform.rotation;
+  // Add when robot move certain distance
+  const double min_distance = 0.1;
+  if (!path_msg_.poses.empty()) {
+    const auto & last_pose = path_msg_.poses.back();
+    double dx = pose.pose.position.x - last_pose.pose.position.x;
+    double dy = pose.pose.position.y - last_pose.pose.position.y;
+    double dist = std::sqrt(dx * dx + dy * dy);
+    if (dist < min_distance) {
+      return;
+    }
+  }
+  // Update
   path_msg_.header.stamp = this->get_clock()->now();
   path_msg_.poses.push_back(pose);
   // Limit number of stored poses
