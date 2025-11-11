@@ -22,9 +22,16 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 
   path_msg_.header.frame_id = "nav";
 
+  // Map settings
+  double map_length_x = 70.0;
+  double map_length_y = 70.0;
+  double map_resolution = 0.7;
+  double offset_x = 20.0;
+  double offset_y = 0.0;
+
   // Initialize grid map
   map_.setFrameId("nav");
-  map_.setGeometry(grid_map::Length(10.0, 10.0), 0.7, grid_map::Position(0.0, 0.0));
+  map_.setGeometry(grid_map::Length(map_length_x, map_length_y), map_resolution, grid_map::Position(offset_x, offset_y));
   map_.add("roughness", 0.0);
   map_.add("slope_angle", 0.0);
   map_.add("traversability", 0.0);
@@ -55,7 +62,7 @@ void TraversabilityPublisher::gridCellArrayCallback(
   // move map center to robot position
   grid_map::Position robot_pos(transform_stamped.transform.translation.x,
     transform_stamped.transform.translation.y);
-  map_.move(robot_pos);
+  // map_.move(robot_pos); // HACK: Comment out this line to create global map
   // Wight
   float w_r = 0.5;
   float w_s = 0.5;
