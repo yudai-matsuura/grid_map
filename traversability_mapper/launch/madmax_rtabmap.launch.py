@@ -13,7 +13,7 @@ def generate_launch_description():
                 'frame_id': 'tcp_base',
                 'odom_frame_id': 'nav',
                 'subscribe_rgbd': False,
-                'map_frame_id': 'nav',
+                # 'map_frame_id': 'nav',
                 'subscribe_rgbd': False,
                 'approx_sync': True,
                 'use_sim_time': True,
