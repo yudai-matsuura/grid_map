@@ -25,9 +25,9 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   // Map settings
   double map_length_x = 70.0;
   double map_length_y = 70.0;
-  double map_resolution = 0.7;
-  double offset_x = -30.0;
-  double offset_y = -20.0;
+  double map_resolution = 0.8;
+  double offset_x = 0.0;
+  double offset_y = 0.0;
 
   // Initialize grid map
   map_.setFrameId("nav");
