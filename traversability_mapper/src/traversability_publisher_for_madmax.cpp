@@ -26,8 +26,8 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   double map_length_x = 70.0;
   double map_length_y = 70.0;
   double map_resolution = 0.8;
-  double offset_x = 0.0;
-  double offset_y = 0.0;
+  double offset_x = -20.0;
+  double offset_y = -20.0;
 
   // Initialize grid map
   map_.setFrameId("nav");
@@ -99,8 +99,13 @@ void TraversabilityPublisher::gridCellArrayCallback(
     map_.at("slope_color", index) = packed_color_s;
 
     // Geometric traversability
-    float geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle);
-    geometric_traversability = std::clamp(geometric_traversability, 0.0f, 1.0f);
+    float geometric_traversability;
+    if (roughness >= 1.0f || slope_angle >= 1.0f) {
+      geometric_traversability = 0.0f;
+    } else {
+      geometric_traversability = 1.0f - (w_r * roughness + w_s * slope_angle);
+      geometric_traversability = std::clamp(geometric_traversability, 0.0f, 1.0f);
+    }
     map_.at("traversability", index) = geometric_traversability;
     float inverse_traversability = 1.0f - geometric_traversability;
     Eigen::Vector3f rgb_t = getGradationColor(inverse_traversability);

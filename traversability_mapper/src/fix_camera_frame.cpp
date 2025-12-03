@@ -10,11 +10,11 @@ public:
   {
     // Subscriber
     image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-      "/hcru2/pt_stereo_rect/left/image", 10,
+      "/hcru2/pt_color_rect/left/image", 10,
       std::bind(&FrameIdFixer::imageCallback, this, std::placeholders::_1));
 
     info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-      "/hcru2/pt_stereo_rect/right/camera_info", 10,
+      "/hcru2/pt_color_rect/left/camera_info", 10,
       std::bind(&FrameIdFixer::infoCallback, this, std::placeholders::_1));
 
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
