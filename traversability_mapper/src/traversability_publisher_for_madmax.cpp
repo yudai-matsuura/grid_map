@@ -7,7 +7,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/robot_path", 10);
 
   // Subscriber
-  grid_cell_array_sub_ = this->create_subscription<lbr_msgs::msg::GridCellArray>(
+  grid_cell_array_sub_ = this->create_subscription<lbr_terrain_analysis::msg::GridCellArray>(
     "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
 
   // TF
@@ -26,7 +26,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   double map_length_x = 70.0;
   double map_length_y = 70.0;
   double map_resolution = 0.8;
-  double offset_x = -20.0;
+  double offset_x = 0.0;
   double offset_y = -20.0;
 
   // Initialize grid map
@@ -45,7 +45,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 }
 
 void TraversabilityPublisher::gridCellArrayCallback(
-  const lbr_msgs::msg::GridCellArray::SharedPtr msg)
+  const lbr_terrain_analysis::msg::GridCellArray::SharedPtr msg)
 {
   map_.setTimestamp(this->get_clock()->now().nanoseconds());
 

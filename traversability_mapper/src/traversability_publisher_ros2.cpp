@@ -26,7 +26,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
   // grid_cell_array_sub_ = this->create_subscription<traversability_msgs::msg::GridCellArray>(
   //   "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
 
-  grid_cell_array_sub_ = this->create_subscription<lbr_msgs::msg::GridCellArray>(
+  grid_cell_array_sub_ = this->create_subscription<lbr_terrain_analysis::msg::GridCellArray>(
     "/grid_cells", 10, std::bind(&TraversabilityPublisher::gridCellArrayCallback, this, std::placeholders::_1));
 
   // TF
@@ -55,7 +55,7 @@ TraversabilityPublisher::TraversabilityPublisher() : Node("traversability_publis
 }
 
 void TraversabilityPublisher::gridCellArrayCallback(
-  const lbr_msgs::msg::GridCellArray::SharedPtr msg)
+  const lbr_terrain_analysis::msg::GridCellArray::SharedPtr msg)
 {
   map_.setTimestamp(this->get_clock()->now().nanoseconds());
 

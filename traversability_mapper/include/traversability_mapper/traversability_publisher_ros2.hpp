@@ -34,8 +34,8 @@
 
 // #include "traversability_msgs/msg/classified_region.hpp"
 // #include "traversability_msgs/msg/grid_cell_data.hpp"
-#include "lbr_msgs/msg/grid_cell_geometric_data.hpp"
-#include "lbr_msgs/msg/grid_cell_array.hpp"
+#include "lbr_terrain_analysis/msg/grid_cell_geometric_data.hpp"
+#include "lbr_terrain_analysis/msg/grid_cell_array.hpp"
 
 
 class TraversabilityPublisher : public rclcpp::Node
@@ -47,7 +47,7 @@ private:
   // Classify region
   // void classifiedRegionCallback(const traversability_msgs::msg::ClassifiedRegion::SharedPtr msg);
 
-  void gridCellArrayCallback(const lbr_msgs::msg::GridCellArray::SharedPtr msg);
+  void gridCellArrayCallback(const lbr_terrain_analysis::msg::GridCellArray::SharedPtr msg);
   // void gridCellArrayCallback(const traversability_msgs::msg::GridCellArray::SharedPtr msg);
 
   // make gradation color
@@ -77,7 +77,7 @@ private:
 
   // Subscriber
   // rclcpp::Subscription<traversability_msgs::msg::ClassifiedRegion>::SharedPtr classified_region_sub_;
-  rclcpp::Subscription<lbr_msgs::msg::GridCellArray>::SharedPtr grid_cell_array_sub_;
+  rclcpp::Subscription<lbr_terrain_analysis::msg::GridCellArray>::SharedPtr grid_cell_array_sub_;
   // rclcpp::Subscription<traversability_msgs::msg::GridCellArray>::SharedPtr grid_cell_array_sub_;
 
   // Variables

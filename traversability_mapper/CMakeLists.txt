@@ -12,7 +12,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
 find_package(grid_map_core REQUIRED)
 # find_package(traversability_msgs REQUIRED)
-find_package(lbr_msgs REQUIRED)
+find_package(lbr_terrain_analysis REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
@@ -32,7 +32,7 @@ ament_target_dependencies(
   tf2_ros
   tf2_geometry_msgs
   # traversability_msgs
-  lbr_msgs)
+  lbr_terrain_analysis)
 
   # traversability_publisher_for_MADMAX
 add_executable(traversability_publisher_for_madmax src/traversability_publisher_for_madmax.cpp)
@@ -59,7 +59,7 @@ ament_target_dependencies(
   sensor_msgs
   tf2_ros
   tf2_geometry_msgs
-  lbr_msgs
+  lbr_terrain_analysis
 )
 
 install(TARGETS
