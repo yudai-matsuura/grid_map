@@ -62,9 +62,28 @@ ament_target_dependencies(
   lbr_terrain_analysis
 )
 
+# traversability_publisher_for_sim
+add_executable(traversability_publisher_for_sim src/traversability_publisher_for_sim.cpp)
+
+target_include_directories(traversability_publisher_for_sim PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(
+  traversability_publisher_for_sim
+  rclcpp
+  grid_map_ros
+  grid_map_core
+  sensor_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  lbr_terrain_analysis
+)
+
 install(TARGETS
   traversability_publisher_ros2
   traversability_publisher_for_madmax
+  traversability_publisher_for_sim
   DESTINATION lib/${PROJECT_NAME})
 
 install(
